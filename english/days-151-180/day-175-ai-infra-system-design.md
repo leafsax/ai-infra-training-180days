@@ -53,3 +53,10 @@
       C --> D[Optimization Recommendations]
       D --> E[Automated Scaling/Compression]
   ```
+
+
+### **9) Interviewer Follow-up Questions (Sharp & Picky)**
+
+- **On PII Redaction & False Positives:** For your PII detection and redaction module, what is the acceptable false-positive rate? How do you ensure the redacted text doesn't break the model's context window or cause the model to generate unsafe or nonsensical outputs?
+- **On Spot Instances & Preemption:** For cost optimization using spot instances, what is the maximum acceptable preemption rate for your training jobs? How do you dynamically migrate or save checkpoints when a spot instance is terminated with only a 2-minute warning?
+- **On Quantum/Post-Quantum Crypto:** You mentioned Kyber and Dilithium for post-quantum cryptography. What is the overhead in terms of latency and bandwidth when applying these algorithms to real-time inference traffic? How do you achieve crypto-agility without redesigning the serving gateway?
