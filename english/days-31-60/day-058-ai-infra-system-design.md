@@ -59,6 +59,6 @@ For production LLM serving, canary deployments with shadow testing and metrics c
 
 ### **9) Interviewer Follow-up Questions (Sharp & Picky)**
 
-- **On KV Cache & PagedAttention:** You proposed PagedAttention for KV cache management. What happens when HBM is heavily fragmented under varying context lengths? How do you handle cache eviction policies under heavy load without degrading model accuracy or causing hallucinations?
-- **On GPU Partitioning (MIG/vGPU):** For MIG or vGPU partitioning, what is the hard isolation guarantee? Can a noisy neighbor in one MIG partition still affect another via shared PCIe lanes or CPU memory bandwidth? How do you measure and enforce SLOs per partition in real-time?
-- **On Auto-Scaling & Thrashing:** For KEDA-based auto-scaling, what is the scale-from-zero latency for bringing up a new vLLM pod? How do you prevent scaling thrashing when QPS fluctuates rapidly around the scaling threshold (e.g., +20% then -20% within 10 seconds)?
+- **On Traffic Splitting & Routing:** You mentioned feature flags and service mesh for traffic routing. What is the exact algorithm for percentage-based traffic splitting? How do you ensure sticky sessions or user-specific routing during a canary release without introducing significant latency overhead?
+- **On Statistical Significance & A/B Testing:** For A/B testing two model versions, how do you determine the minimum sample size required to achieve statistical significance? What metrics do you track to ensure the canary model does not degrade user engagement or increase error rates?
+- **On Rollback & Shadow Deployments:** In a shadow deployment, you route live traffic to both old and new models. How do you handle stateful operations or side-effects (e.g., logging, analytics) that should only be triggered by the stable model? What is the exact RTO (Recovery Time Objective) for a zero-downtime rollback if the canary model exhibits severe issues?
