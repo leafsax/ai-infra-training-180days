@@ -35,21 +35,23 @@ For production LLM serving, canary deployments with shadow testing and metrics c
 
 ### **8) Component Diagram & Data Flow Diagram**
 
-- **Component Diagram (GPU Cluster Management)**:
+- **Component Diagram (A/B Testing & Canary Deployments)**:
   ```mermaid
   graph TD
-      A[Cluster Controller] --> B[GPU Nodes H100]
-      B --> C[MIG / vGPU Partitioner]
-      B --> D[RDMA Network Switch]
-      A --> E[Auto-Scaler KEDA]
-      E --> B
+      A[User Traffic] --> B[API Gateway / Service Mesh]
+      B --> C[Canary Router / Feature Flags]
+      C --> D[Stable Model Version]
+      C --> E[Canary Model Version]
+      D --> F[Metrics & Logging Dashboard]
+      E --> F
   ```
 
-- **Data Flow Diagram (Scaling)**:
+- **Data Flow Diagram (Canary Release Flow)**:
   ```mermaid
   flowchart LR
-      A[Traffic Spike] --> B[Metrics Collector DCGM]
-      B --> C[Scaler Controller]
-      C --> D[Provision New GPU Pods]
-      D --> E[Route Traffic to New Pods]
+      A[Incoming Request] --> B[Traffic Splitter]
+      B -->|95%| C[Stable Model]
+      B -->|5%| D[Canary Model]
+      C --> E[User Response]
+      D --> F[Shadow Metrics Collection]
   ```

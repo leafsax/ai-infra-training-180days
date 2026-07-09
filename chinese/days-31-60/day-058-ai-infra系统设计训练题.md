@@ -40,21 +40,21 @@
 
 ### **8) 组件图与数据流图**
 
-- **组件图（Component Diagram - GPU集群管理）**：
+- **组件图（Component Diagram - 分布式训练）**：
   ```mermaid
   graph TD
-      A[集群控制器] --> B[GPU节点 H100]
-      B --> C[MIG / vGPU 分区器]
-      B --> D[RDMA 网络交换机]
-      A --> E[自动扩缩容 KEDA]
-      E --> B
+      A[数据加载器] --> B[训练节点 GPU+CPU]
+      B --> C[NCCL All-Reduce 网络]
+      B --> D[检查点存储 S3/NFS]
+      B --> E[模型注册表 MLflow]
+      C --> B
   ```
 
-- **数据流图（Data Flow Diagram - 扩缩容流程）**：
+- **数据流图（Data Flow Diagram - 训练流程）**：
   ```mermaid
   flowchart LR
-      A[流量突增] --> B[指标收集器 DCGM]
-      B --> C[Scaler 控制器]
-      C --> D[ Provision 新GPU Pods]
-      D --> E[路由流量到新Pods]
+      A[训练数据] --> B[各GPU梯度计算]
+      B --> C[NCCL梯度同步]
+      C --> D[权重更新]
+      D --> E[检查点保存]
   ```
