@@ -1,38 +1,27 @@
-# 第119天：第119天：AI Infra系统设计训练题
+### Day 119: Model Registry: Automated Evaluation & Quality Gates
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计模型注册表的自动化评估和质量门禁（Quality Gates）系统。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **评估延迟**：批量评估1000样本 ≤ 10分钟。
+- **质量门禁指标**：准确性 ≥ 90%，延迟 TP99 ≤ 2s。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **评估流水线**：集成自动测试数据集和评估指标计算。
+- **质量门禁策略**：未通过评估的模型版本禁止部署到生产。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **静态评估 vs 在线A/B评估**：静态评估快但可能不反映真实流量；在线A/B真实但耗时长。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **速度 vs 真实性**：静态评估快但可能有偏差。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用静态评估作为质量门禁，结合上线后的A/B测试进行最终验证。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Quality Gates（质量门禁）**：部署前的自动化检查点，确保模型满足标准。
+
+---
+

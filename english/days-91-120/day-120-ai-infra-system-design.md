@@ -1,38 +1,32 @@
-# Day 120: Day 120: AI Infra System Design Topic 120
+### Day 120: Model Registry Deep Dive: Open Source vs. Commercial Registries (Hugging Face, MLflow, Weights & Biases, AWS SageMaker Model Registry)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry Deep Dive: Open Source vs. Commercial Registries.
+- Core Examination Areas: Comparison of popular model registry solutions, their features, strengths, and use cases.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Open Source Registries**: MLflow Model Registry, Hugging Face Hub (open components), Weights & Biases (free tier + paid).
+- **Commercial/Cloud Registries**: AWS SageMaker Model Registry, Google Vertex AI Model Registry, Azure ML Model Registry.
+- **Feature Parity**: Versioning, metadata, staging, lineage, CI/CD integration.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **MLflow Model Registry**: Python library with a tracking server and registry UI. Stores metadata in a database (SQLite, PostgreSQL) and artifacts in local file system or S3.
+- **Hugging Face Hub**: Git-based versioning for model files, with a web UI and Python `huggingface_hub` library for programmatic access.
+- **AWS SageMaker Model Registry**: Integrated with AWS services, supports model packages, approval workflows, and integration with SageMaker Model Monitor and Endpoints.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **MLflow**: Best for open-source, self-hosted MLOps pipelines. Highly customizable but requires infrastructure management.
+- **Hugging Face Hub**: Best for community models, pre-trained VLMs/LLMs, and datasets. Strong ecosystem but less focused on enterprise governance workflows.
+- **Cloud Registries (SageMaker, Vertex AI)**: Best for teams already in the cloud ecosystem. Offer integrated governance, monitoring, and deployment but can be vendor-locked.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Open Source vs. Commercial*: Open source offers flexibility and no vendor lock-in but requires self-hosting and maintenance. Commercial registries offer managed services and integrations but may incur costs and lock-in.
+- *Community vs. Enterprise Focus*: Hugging Face is community and research-focused. MLflow and cloud registries are more enterprise and production-focused.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For research and community sharing, use Hugging Face Hub. For self-hosted MLOps pipelines with full control, use MLflow Model Registry. For teams already using a specific cloud provider (AWS, GCP, Azure), use their native model registry (SageMaker, Vertex AI, Azure ML) for integrated governance and deployment workflows.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **AWS SageMaker**: A fully managed service provided by Amazon Web Services that enables developers and data scientists to prepare, build, train, and deploy machine learning models.
+- **Google Vertex AI**: A managed machine learning platform on Google Cloud that provides tools for building, deploying, and scaling ML models.
+- **Azure ML (Azure Machine Learning)**: A cloud service for accelerating and managing the machine learning lifecycle, offered by Microsoft Azure.

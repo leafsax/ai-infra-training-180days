@@ -1,38 +1,30 @@
-# 第103天：第103天：AI Infra系统设计训练题
+### Day 103: Multimodal Training Architecture: Connector & Encoder-Decoder
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计VLM的Connector架构和Encoder-Decoder多模态训练架构。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **Connector参数量**：≤ 1B参数（投影层）。
+- **显存占用目标**：Connector训练期间显存增加 ≤ 10%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **MLP Projection**：将视觉特征映射到语言模型维度。
+- **Q-Former (Querying Transformer)**：如BLIP-2使用，通过query tokens压缩视觉特征。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **MLP vs Q-Former**：
+  - *MLP*：简单高效，但可能无法充分压缩视觉信息。
+  - *Q-Former*：有效压缩视觉tokens，但增加训练复杂度。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **复杂度 vs 特征压缩效率**：Q-Former压缩比高但训练慢。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+对于30B VLM，采用轻量MLP projection或单层Transformer connector，平衡训练速度与性能。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **MLP (Multi-Layer Perceptron)**：多层感知机，基础神经网络层。
+- **Q-Former (Querying Transformer)**：通过query tokens选择重要视觉特征的Transformer模块。
+
+---
+

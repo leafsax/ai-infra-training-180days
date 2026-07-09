@@ -1,38 +1,31 @@
-# Day 112: Day 112: AI Infra System Design Topic 112
+### Day 112: Model Catalog and Metadata Management
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Model Catalog and Metadata Management.
+- Core Examination Areas: Storing and querying model metadata, including hyperparameters, training data info, and performance metrics.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Metadata Fields**: Model name, version, framework (PyTorch, TensorFlow), parameter count, training dataset, evaluation metrics, author, creation date.
+- **Query Latency**: Time to search or retrieve model metadata from the registry. Target < 100ms for catalog queries.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Metadata Store**: A database (e.g., PostgreSQL, MongoDB) or a specialized ML metadata store (e.g., MLflow Metadata, Kubeflow Metadata).
+- **Catalog Interface**: A UI or API that allows users to search, filter, and view model metadata and versions.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **MLflow Model Registry**: Tracks model versions, metadata, and stages. Integrates with MLflow Tracking for experiment metadata.
+- **Hugging Face Hub**: A community model registry with metadata, datasets, and spaces. Uses Git-like versioning for model files.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Custom Metadata Store vs. Existing Tools*: Custom stores offer full control but require maintenance. Existing tools (MLflow, Hugging Face) are mature but may not fit all enterprise governance requirements.
+- *Structured vs. Unstructured Metadata*: Structured metadata (database fields) is easy to query. Unstructured (JSON blobs) is flexible but harder to search.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use MLflow Model Registry or Hugging Face Hub for most use cases. Ensure metadata includes hyperparameters, dataset versions, and evaluation metrics. Use structured fields for searchable attributes and JSON for extensible metadata.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **MLflow**: An open-source platform for managing the end-to-end machine learning lifecycle, including tracking, packaging, and deployment.
+- **Kubeflow Metadata**: A component of Kubeflow that tracks metadata about machine learning experiments and models.
+
+---
+

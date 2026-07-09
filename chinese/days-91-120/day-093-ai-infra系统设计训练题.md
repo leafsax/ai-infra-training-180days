@@ -1,38 +1,35 @@
-# 第93天：第93天：AI Infra系统设计训练题
+### Day 93: ZeRO-1/2/3 Checkpointing and Sharded State Management
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计基于ZeRO（Zero Redundancy Optimizer）的检查点机制，考察对模型并行、数据并行状态下状态分片（Sharding）与检查点保存的理解。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **模型参数**：70B参数，FP16格式，约140GB显存。
+- **优化器状态**：Adam优化器需2x参数大小（动量和方差），约280GB。
+- **ZeRO-3分片**：每个GPU仅保存部分参数和优化器状态。
+- **检查点保存时间目标**：≤ 150秒（包含所有节点的状态收集与合并）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **ZeRO状态分片**：将模型权重、梯度、优化器状态跨GPU分片。
+- **检查点合并器**：在保存时，各节点将分片状态发送至CPU或集中存储节点，合并为完整检查点。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **ZeRO-1 vs ZeRO-2 vs ZeRO-3**：
+  - *ZeRO-1*：仅分片优化器状态。
+  - *ZeRO-2*：分片优化器状态和梯度。
+  - *ZeRO-3*：分片模型权重、梯度和优化器状态，极大降低单GPU显存占用，但检查点合并通信开销大。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **显存节省 vs 通信开销**：ZeRO-3大幅降低显存需求，但检查点保存时需要跨节点收集所有分片状态，增加网络I/O压力。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+对于70B模型在80GB HBM GPU上训练，ZeRO-3是必须的。为减少检查点开销，采用异步ZeRO检查点保存，结合NCCL通信优化。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **ZeRO (Zero Redundancy Optimizer)**：由DeepSpeed提出的优化技术，通过消除数据并行中的冗余状态来降低显存占用。
+- **DP (Data Parallelism)**：数据并行，多个GPU处理不同数据批次，保存完整模型副本。
+- **FP16 (Float 16)**：16位浮点数格式，用于减少显存占用和加速计算。
+- **Adam Optimizer**：一种常用的优化算法，维护动量和方差状态。
+
+---
+

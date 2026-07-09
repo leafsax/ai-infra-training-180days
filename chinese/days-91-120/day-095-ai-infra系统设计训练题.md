@@ -1,38 +1,33 @@
-# 第95天：第95天：AI Infra系统设计训练题
+### Day 95: Checkpoint Compression & Optimization (CPU offload, quantization)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计检查点压缩与优化机制，减少检查点存储大小和网络/存储I/O时间。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **原始检查点大小**：300GB（FP16权重+优化器状态）。
+- **压缩目标**：缩小至 ≤ 100GB。
+- **压缩/解压缩时间**：≤ 30秒（不显著增加检查点保存/恢复时间）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **CPU Offload**：将优化器状态和部分权重卸载到CPU内存。
+- **量化（Quantization）**：将FP16检查点量化为INT8或BF16，减少大小。
+- **无损/有损压缩算法**：如Zstd、GZIP用于存储压缩。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **无损压缩 vs 有损量化**：
+  - *无损压缩（Zstd）*：安全但压缩比有限（约2:1）。
+  - *有损量化（FP16 → INT8）*：压缩比高（4:1），但需评估对模型精度的影响。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **压缩比 vs 计算开销**：高压缩比需要更多CPU计算时间，可能抵消I/O节省的时间。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用混合策略：权重使用无损压缩（Zstd），优化器状态使用CPU offload+轻量量化，确保总保存时间 ≤ 120秒。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **CPU Offload**：将数据或计算从GPU转移到CPU内存或处理器。
+- **Quantization（量化）**：降低模型数值精度（如FP16到INT8）以减少显存和计算开销。
+- **BF16 (Bfloat 16)**：Google提出的16位浮点格式，保持与FP32相同的指数范围，适合训练。
+
+---
+

@@ -1,42 +1,39 @@
-# 第91天：第91天：AI Infra系统设计训练题
+### Day 91: Checkpointing Basics & Failure Recovery in Distributed Training
 
-## 1) 题目与考察核心
-**题目**：设计一个高吞吐、低延迟的通用大语言模型（LLM）推理服务系统，支持多租户并发请求。
-**考察核心**：推理服务架构、请求调度机制、批处理技术（Batching）、预填充（Prefill）与解码（Decode）阶段的优化。
+#### 1) 题目与考察核心
+设计分布式大模型训练系统中的检查点（Checkpointing）基础机制与故障恢复（Failure Recovery）流程。考察对训练状态保存、分布式一致性、故障检测与恢复的理解。
 
-## 2) 需求澄清与指标定义
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+#### 2) 需求澄清与指标定义（含具体预估数据例子）
+- **训练规模**：1024张H100 GPU（80GB HBM），训练70B参数模型。
+- **检查点频率**：每5000步保存一次检查点。
+- **单步训练时间**：约120秒/步。
+- **检查点保存时间目标**：≤ 120秒（不阻塞训练超过1个步长）。
+- **故障恢复时间目标（RTO）**：≤ 5分钟（从检查点恢复并继续训练）。
+- **存储容量需求**：每次检查点大小约 300GB（优化压缩后）。
 
-## 3) 核心架构/技术组件设计
-- API Gateway & 请求队列
-- 调度器（Scheduler）
-- 推理引擎（Inference Engine）
-- 模型权重存储
+#### 3) 核心架构/技术组件设计
+- **状态管理组件**：保存模型权重（Weights）、优化器状态（Optimizer States）、学习率调度器状态（LR Scheduler）、训练步数（Step Count）。
+- **分布式协调服务**：使用类似etcd或Redis的分布式锁/协调服务，确保多节点在保存检查点时的一致性。
+- **存储层**：高速NVMe SSD本地存储或分布式文件系统（DFS）用于热检查点，对象存储（如S3）用于长期归档。
 
-## 4) 关键技术深入与可能解
-- **Static Batching（静态批处理）**
-- **Continuous Batching（连续批处理/In-flight Batching）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **同步检查点 vs 异步检查点**：
+  - *同步检查点*：所有GPU同步暂停训练，保存状态后继续。简单但阻塞训练时间长。
+  - *异步检查点*：将状态写入CPU内存或异步I/O线程，GPU继续计算。可减少训练停顿，但增加系统复杂性。
 
-## 5) Trade-off（权衡）分析
-- Batch Size 增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+#### 5) Trade-off（权衡）分析
+- **检查点频率 vs 存储开销**：高频检查点减少恢复时间，但增加存储I/O压力和存储成本。
+- **同步 vs 异步**：同步保证强一致性，异步提高GPU利用率但可能引入状态不一致风险。
 
-## 6) 如何确定最优解
-Continuous Batching + 动态 KV Cache 管理
+#### 6) 如何确定最优解
+根据故障率（MTBF - Mean Time Between Failures）和检查点保存/恢复时间，计算最优检查点间隔。使用公式：最优间隔 = √(2 * 检查点保存时间 * MTBF)。对于1024 GPU集群，MTBF可能为几小时，因此异步检查点结合频繁保存（如每1000-5000步）是较优解。
 
-## 7) 名词和缩写解释
-- **LLM**: Large Language Model，大语言模型
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99%的请求延迟小于该值
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: 静态批处理
-- **Continuous Batching**: 连续批处理
-- **Prefill**: 处理输入Prompt阶段
-- **Decode**: 逐Token生成输出阶段
+#### 7) 名词和缩写全称及解释
+- **Checkpointing（检查点）**：在训练过程中定期保存模型状态，以便在故障时恢复。
+- **MTBF (Mean Time Between Failures)**：平均故障间隔时间，衡量系统可靠性。
+- **RTO (Recovery Time Objective)**：恢复时间目标，指从故障发生到系统恢复服务所需的时间。
+- **HBM (High Bandwidth Memory)**：高带宽内存，GPU使用的显存类型，如H100的80GB HBM3。
+- **DFS (Distributed File System)**：分布式文件系统，如Lustre、GPFS，用于多节点共享存储。
+
+---
+

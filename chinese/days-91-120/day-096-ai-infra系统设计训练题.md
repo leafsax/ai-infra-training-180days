@@ -1,38 +1,30 @@
-# 第96天：第96天：AI Infra系统设计训练题
+### Day 96: Checkpoint Consistency & Atomic Writes in Distributed Systems
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+确保分布式检查点的一致性与原子写入（Atomic Writes），避免故障恢复时加载损坏的检查点。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **一致性要求**：检查点必须是全局一致的（所有节点状态同步）。
+- **原子写入目标**：检查点要么完全保存成功，要么完全不保存，无部分写入状态。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **版本控制与临时目录**：检查点先写入临时目录（如`checkpoint-temp-<step>`），完成后原子重命名（rename）到正式目录。
+- **分布式锁/协调**：使用etcd或Redis确保同一训练作业不会同时写入多个检查点版本。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **原子重命名 vs 事务性存储**：
+  - *原子重命名*：POSIX文件系统支持同一目录下的rename操作为原子操作。
+  - *事务性存储*：对象存储支持版本控制，但需额外逻辑确保一致性。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **简单性 vs 可靠性**：原子重命名简单且高效，但依赖底层文件系统支持；事务性存储更可靠但复杂度高。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用临时目录+原子重命名机制，确保DFS或本地NVMe上的检查点保存具有原子性。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Atomic Writes（原子写入）**：写入操作要么完全成功，要么完全失败，不会出现部分写入状态。
+- **etcd**：分布式键值存储，常用于分布式系统的协调和锁管理。
+
+---
+

@@ -1,38 +1,34 @@
-# Day 97: Day 97: AI Infra System Design Topic 97
+### Day 97: Fault Tolerance Mechanisms: Checkpoint Recovery, Rollback, and Restart Strategies
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Fault Tolerance Mechanisms: Checkpoint Recovery, Rollback, and Restart Strategies.
+- Core Examination Areas: How to recover from node failures, network partitions, and storage errors during training.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **RTO (Recovery Time Objective)**: Target < 10 minutes for checkpoint recovery and job restart.
+- **RPO (Recovery Point Objective)**: Target < 1 training step (or latest checkpoint step) for data loss.
+- **Node Failure Rate**: In a cluster of 1000 GPUs, expect 1-2 node failures per week. 
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Checkpoint Recovery Workflow**: Detect failure -> Provision new node -> Fetch latest checkpoint from storage -> Initialize model and optimizer state -> Resume training from saved step.
+- **Rollback Strategy**: If a corrupted checkpoint is detected during restore, fall back to the previous valid checkpoint.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Automatic Recovery (Kubernetes/Slurm)**: Orchestrators detect failed pods/nodes and reschedule them. The training framework (e.g., PyTorch Distributed) reads the checkpoint step and resumes.
+- **Checkpoint Validation**: Before resuming, validate checkpoint integrity (e.g., checksums, tensor shape checks) to avoid restoring corrupted data.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Frequent Validation vs. Recovery Speed*: Validating checkpoints ensures data integrity but adds time to the recovery process.
+- *Rollback Frequency vs. Data Loss*: Rolling back to an older checkpoint increases data loss but ensures training continues with valid state.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Implement automated checkpoint validation (checksums, metadata checks) as part of the recovery workflow.
+- Set RTO and RPO based on business requirements: for critical long-term training, RPO should be the latest checkpoint, and RTO should be minimized via high-performance storage and fast node provisioning.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **RTO (Recovery Time Objective)**: The maximum acceptable length of time that a system or application can be down after a failure or disaster.
+- **RPO (Recovery Point Objective)**: The maximum acceptable amount of data loss measured in time from the last backup point.
+- **Pod (Kubernetes)**: The smallest and simplest unit in the Kubernetes object model that you create or deploy.
+
+---
+

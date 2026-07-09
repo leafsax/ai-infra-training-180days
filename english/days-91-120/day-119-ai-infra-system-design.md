@@ -1,38 +1,31 @@
-# Day 119: Day 119: AI Infra System Design Topic 119
+### Day 119: Model Registry Scalability and Distributed Consistency (e.g., etcd, Consul)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry Scalability and Distributed Consistency.
+- Core Examination Areas: Ensuring the model registry can handle high concurrency, multiple writes, and maintains consistency across distributed components.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Concurrency**: Number of simultaneous registry operations (upload, version update, deployment change). Target > 1000 operations per second for large enterprises.
+- **Consistency Model**: Strong consistency vs. Eventual consistency. Registry metadata updates should have strong consistency to prevent race conditions in deployment.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Registry Database**: A distributed database or key-value store (e.g., PostgreSQL with read replicas, etcd, Consul) for metadata.
+- **Artifact Storage**: Object storage (S3) for model files, which is eventually consistent but highly scalable.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **etcd**: A distributed key-value store used by Kubernetes for cluster state. Can be used for registry metadata with strong consistency.
+- **Consul**: A service mesh solution offering service discovery, configuration, and segmentation features, with a distributed consensus algorithm.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Strong vs. Eventual Consistency*: Strong consistency prevents race conditions (e.g., two deployments of the same version) but can reduce availability or performance. Eventual consistency scales better but requires conflict resolution mechanisms.
+- *Database vs. Key-Value Store*: Relational databases (PostgreSQL) offer rich querying and transactions. Key-value stores (etcd) offer high performance and consistency for simple metadata but less flexible querying.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use a relational database with transaction support (PostgreSQL) or a distributed key-value store with strong consistency (etcd) for registry metadata. Ensure model artifact storage uses a highly scalable object storage system. Implement version locking or optimistic concurrency control to prevent deployment race conditions.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **etcd**: A distributed reliable key-value store for the most critical data of a distributed system, commonly used by Kubernetes.
+- **Optimistic Concurrency Control**: A concurrency control method that assumes multiple transactions can complete without conflicting, and checks for conflicts only at commit time.
+
+---
+

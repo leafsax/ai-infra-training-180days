@@ -1,38 +1,35 @@
-# 第92天：第92天：AI Infra系统设计训练题
+### Day 92: Checkpoint Storage: Object Storage vs Distributed File System (DFS)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计检查点存储架构，对比对象存储（Object Storage，如S3）与分布式文件系统（DFS，如Lustre）在AI训练检查点场景下的适用性。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **检查点大小**：每次约 300GB。
+- **保存QPS**：每10分钟1次集群级检查点写入，即约 0.0016 QPS（但单次吞吐量极高，需 300GB / 120s ≈ 2.5 GB/s 持续写入带宽）。
+- **恢复延迟目标**：从存储加载300GB检查点至GPU内存 ≤ 3分钟。
+- **持久化要求**：检查点需保留至少30天，之后归档到冷存储。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **DFS架构**：基于NFS或Lustre，提供POSIX兼容接口，适合高并发小文件与大文件顺序读写。
+- **对象存储架构**：基于S3协议，适合海量非结构化数据，但随机读写延迟较高。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **DFS vs 对象存储**：
+  - *DFS（如Lustre/GPFS）*：低延迟、高吞吐量，适合训练中的频繁检查点保存与恢复。
+  - *对象存储（S3）*：成本更低、无限扩展，但API调用延迟高，不适合频繁的小检查点写入，适合长期归档。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **性能 vs 成本**：DFS提供高性能但硬件成本高；对象存储成本低但延迟高。
+- **一致性 vs 可用性**：DFS提供强一致性，对象存储通常最终一致性（尽管现代S3提供强一致性读）。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用混合存储架构：热检查点（最近1-3天）保存在DFS/NVMe集群上以保障快速恢复；冷检查点（>3天）异步迁移到对象存储（S3）以降低成本。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Object Storage（对象存储）**：通过HTTP/API访问的存储系统，如Amazon S3，数据以对象形式存储。
+- **DFS (Distributed File System)**：分布式文件系统，允许多个节点共享同一文件系统命名空间。
+- **Lustre/GPFS**：企业级分布式文件系统，常用于HPC和AI集群。
+- **S3 (Simple Storage Service)**：Amazon的对象存储服务。
+
+---
+

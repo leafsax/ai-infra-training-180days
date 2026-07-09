@@ -1,38 +1,28 @@
-# 第114天：第114天：AI Infra系统设计训练题
+### Day 114: Model Registry Integration with Serving & Deployment (vLLM, TGI)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计模型注册表与推理服务（如vLLM、TGI）的集成架构。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **模型部署延迟**：从注册表选择模型到服务启动 ≤ 5分钟。
+- **并发服务**：支持 10+ 模型同时部署。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **模型拉取服务**：推理服务从注册表/S3拉取模型权重。
+- **服务注册**：推理服务启动后向注册表报告状态。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **静态配置 vs 动态拉取**：静态配置简单但更新慢；动态拉取灵活但增加启动延迟。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **启动速度 vs 灵活性**：动态拉取灵活但启动慢。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用预拉取（Pre-pulling）+ 动态配置更新机制，平衡启动速度与灵活性。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **vLLM**：高吞吐量LLM推理和服务框架。
+- **TGI (Text Generation Inference)**：Hugging Face的LLM推理服务。
+
+---
+

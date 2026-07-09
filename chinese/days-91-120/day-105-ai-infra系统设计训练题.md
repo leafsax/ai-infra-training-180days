@@ -1,38 +1,34 @@
-# 第105天：第105天：AI Infra系统设计训练题
+### Day 105: Multimodal Inference: Multimodal KV Cache & PagedAttention
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计多模态推理中的KV Cache管理与PagedAttention机制，优化视觉-语言模型的推理显存。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **QPS目标**：500 QPS（图像+文本查询）。
+- **TTFT (Time To First Token) 目标**：≤ 200ms。
+- **TP99 延迟目标**：≤ 1.5秒。
+- **KV Cache显存占用**：图像4096 tokens + 文本512 tokens，需高效管理。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **Multimodal KV Cache**：为视觉和文本tokens分别管理KV状态。
+- **PagedAttention**：将KV Cache分页存储，类似操作系统内存分页。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **连续KV Cache vs PagedAttention**：
+  - *连续分配*：易产生内存碎片，显存利用率低。
+  - *PagedAttention*：vLLM引入，显存利用率可达90%+。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **灵活性 vs 实现复杂度**：PagedAttention复杂但显著提升吞吐量。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用vLLM的PagedAttention架构，支持多模态KV Cache的分页管理。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **KV Cache (Key-Value Cache)**：Transformer推理中缓存的key和value状态，避免重复计算。
+- **PagedAttention**：vLLM提出的注意力机制优化，使用分页管理KV Cache。
+- **TTFT (Time To First Token)**：从请求发送到生成第一个token的时间。
+- **TP99**：99%请求的延迟小于该值。
+
+---
+

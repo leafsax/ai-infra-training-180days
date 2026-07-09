@@ -1,38 +1,30 @@
-# 第98天：第98天：AI Infra系统设计训练题
+### Day 98: Checkpoint Resumption & State Management for Distributed Jobs
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计检查点恢复（Resumption）机制，确保分布式训练作业从检查点无缝继续训练。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **恢复时间目标（RTO）**：≤ 5分钟。
+- **状态一致性**：恢复后模型权重、优化器状态、学习率调度器必须与中断前完全一致。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **状态加载器**：从存储读取检查点，分发到各GPU节点。
+- **学习率调度器恢复**：根据保存的步数（Step Count）重新初始化LR Scheduler。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **全量加载 vs 增量加载**：
+  - *全量加载*：读取所有状态，简单但耗时长。
+  - *增量/分片加载*：各节点仅加载自己负责的分片状态（如ZeRO-3），加快恢复速度。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **恢复速度 vs 实现复杂度**：分片加载需与保存时的分片逻辑严格匹配，增加系统复杂度。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用与保存时一致的分片加载策略（如ZeRO-3分片恢复），结合高速DFS存储，确保RTO ≤ 5分钟。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **LR Scheduler (Learning Rate Scheduler)**：学习率调度器，用于在训练过程中动态调整学习率。
+- **RTO (Recovery Time Objective)**：恢复时间目标。
+
+---
+

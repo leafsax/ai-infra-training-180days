@@ -1,38 +1,28 @@
-# 第111天：第111天：AI Infra系统设计训练题
+### Day 111: Introduction to Model Registries & Core Concepts
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计模型注册表（Model Registry）系统，考察模型版本管理、元数据管理的基础概念。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **模型数量**：1000+ 模型版本。
+- **查询延迟目标**：元数据查询 ≤ 50ms。
+- **并发访问**：支持 500 QPS 的模型元数据读取。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **元数据存储**：使用关系型数据库（如PostgreSQL）存储模型版本、标签、描述。
+- ** artifact 存储**：使用对象存储（S3）存储模型权重文件。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **集中式 vs 分布式注册表**：集中式简单一致，分布式高可用但复杂。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **一致性 vs 可用性**：分布式注册表可能牺牲强一致性换取高可用。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用集中式元数据存储（PostgreSQL）+ 分布式对象存储（S3）的混合架构。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Model Registry（模型注册表）**：用于版本控制、元数据管理和部署模型的中心化系统。
+
+---
+

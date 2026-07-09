@@ -1,38 +1,33 @@
-# 第102天：第102天：AI Infra系统设计训练题
+### Day 102: Multimodal Data Processing: Image/Video/Audio Tokenization
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计多模态数据预处理与Tokenization（标记化）流水线，处理图像、视频、音频数据。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **图像分辨率**：1024x1024，切分为16x16 patch，每个图像约 4096 视觉tokens。
+- **视频帧率**：每秒30帧，10秒视频 = 300帧 = 1,230,000 视觉tokens。
+- **预处理吞吐量**：需支持 ≥ 10,000 图像/秒的预处理速度。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **图像分块（Patchification）**：使用ViT将图像切分为固定大小patches。
+- **音频处理**：使用Whisper或HuBERT将音频转换为特征tokens。
+- **数据加载器**：分布式数据加载，支持内存缓存和预取。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **固定分辨率 vs 动态分辨率**：
+  - *固定分辨率*：简化批处理，但可能浪费计算或丢失细节。
+  - *动态分辨率*：根据内容自适应，但增加batching复杂性。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **灵活性 vs 批处理效率**：动态分辨率提高质量但降低GPU利用率。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+采用固定高分辨率（如1024x1024）结合padding或动态batching策略，平衡质量与效率。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Tokenization（标记化）**：将输入数据（文本、图像、音频）转换为模型可处理的token序列。
+- **Patch**：图像被切分的小块，如16x16像素。
+- **Whisper/HuBERT**：音频处理模型，用于语音识别和特征提取。
+
+---
+

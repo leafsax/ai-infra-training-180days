@@ -1,38 +1,32 @@
-# Day 98: Day 98: AI Infra System Design Topic 98
+### Day 98: Checkpoint Management and Lifecycle (Retention, Pruning, Archiving)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Checkpoint Management and Lifecycle: Retention, Pruning, Archiving.
+- Core Examination Areas: Strategies for managing the growing number of checkpoints over time, storage cost optimization, and retention policies.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Storage Cost**: Target < $0.02 per GB per month for archival storage.
+- **Retention Period**: Active checkpoints retained for 7-14 days; historical checkpoints archived after 30 days.
+- **Pruning Frequency**: Automated pruning of checkpoints older than retention period or those not meeting quality metrics (e.g., validation loss not improved).
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Lifecycle Management System**: A service or script that monitors checkpoint directories, applies retention policies, and moves old checkpoints to archival storage (e.g., S3 Glacier).
+- **Metadata Registry**: A database or file (e.g., JSON/CSV) that tracks checkpoint step numbers, validation metrics, and storage locations.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Automated Pruning Scripts**: Cron jobs or Kubernetes CronJobs that delete checkpoints older than N days or keep only the top K checkpoints based on validation metrics.
+- **Storage Tiering**: Use hot storage (high-performance FS) for recent checkpoints, and cold storage (S3 Glacier, Azure Archive) for old checkpoints.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Retention Length vs. Storage Cost*: Longer retention provides more recovery points and historical model versions but increases storage costs.
+- *Pruning Aggressiveness vs. Recovery Options*: Aggressive pruning saves storage but reduces the number of available checkpoints for rollback or model selection.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Implement a tiered lifecycle: Keep the last 3-5 checkpoints (or checkpoints from each epoch) in hot storage for quick recovery. Archive all other checkpoints to cold storage after 7 days. Use metadata to prune checkpoints that did not improve validation metrics.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **S3 Glacier**: Amazon S3 Glacier is a secure, durable, and low-cost storage class for data archiving and long-term backup.
+- **CronJob (Kubernetes)**: A Kubernetes object used to run scheduled tasks, similar to cron jobs in Linux.
+
+---
+

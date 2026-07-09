@@ -1,38 +1,29 @@
-# 第97天：第97天：AI Infra系统设计训练题
+### Day 97: Checkpoint Eviction & Tiered Storage (Hot/Warm/Cold)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+#### 1) 题目与考察核心
+设计检查点的生命周期管理与分层存储（Tiered Storage）策略，优化存储成本与访问性能。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+#### 2) 需求澄清与指标定义
+- **热数据（Hot）**：最近3天的检查点，需秒级恢复，存储在NVMe/DFS。
+- **温数据（Warm）**：3-30天的检查点，存储在HDD或标准S3，恢复时间 ≤ 10分钟。
+- **冷数据（Cold）**：>30天的检查点，归档到S3 Glacier或磁带，恢复时间数小时。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+#### 3) 核心架构/技术组件设计
+- **元数据管理服务**：记录每个检查点的路径、创建时间、大小、训练步数。
+- **自动迁移策略（Lifecycle Policy）**：基于时间的脚本或存储系统原生策略，自动将数据从热层迁移到冷层。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+#### 4) 关键技术深入与可能解（对比分析不同方案）
+- **存储分层 vs 单一存储**：分层存储降低成本，但增加数据迁移的复杂性和潜在延迟。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+#### 5) Trade-off（权衡）分析
+- **成本 vs 恢复延迟**：冷存储成本极低，但恢复时间长；热存储成本高但恢复快。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+#### 6) 如何确定最优解
+根据合规要求和故障恢复SLA，设定3天热、30天温、>30天冷的分层策略，使用DFS+对象存储组合。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+#### 7) 名词和缩写全称及解释
+- **Tiered Storage（分层存储）**：根据数据访问频率将数据分布在不同性能/成本的存储层。
+- **S3 Glacier**：Amazon的冷归档对象存储服务，成本低但检索延迟高。
+
+---
+
