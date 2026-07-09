@@ -1,38 +1,34 @@
-# 第126天：第126天：AI Infra系统设计训练题
+### Day 126: AI训练数据存储需求与架构
+**1) 题目与考察核心**  
+设计支撑万卡LLM预训练的存储架构，满足高并发、高吞吐的数据读取需求。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 数据规模：100 TB原始文本数据，处理后Token数据集约 30 TB。
+- 并发读取：1,250个计算节点，每节点需同时读取数据，聚合吞吐需 > 50 GB/s。
+- 延迟：数据块（Chunk）读取延迟 < 5 ms。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 存储类型：分布式并行文件系统（如Lustre, GPFS）或对象存储（S3）+ 本地缓存（NVMe SSD）。
+- 架构：HDFS/Lustre元数据服务器（MDS） + 多个Object Servers (OSS) + 计算节点本地NVMe缓存。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- **Lustre**: 企业级并行文件系统，高吞吐，适合HPC/AI。
+- **Ceph**: 分布式对象/块/文件系统，开源，但吞吐和延迟不如Lustre。
+- **本地NVMe缓存**: 节点本地SSD缓存热点数据，减少远端存储压力。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- 并行文件系统 vs 对象存储：Lustre/GPFS吞吐高但部署复杂、成本高；S3对象存储成本低但高并发小文件读取延迟高、吞吐受限。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+对于TB级预训练数据，采用Lustre或GPFS作为主存储，计算节点挂载本地NVMe作为缓存层（Data Cache），通过预取（Prefetch）和异步读取掩盖I/O延迟。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **LLM**: Large Language Model（大语言模型）。
+- **Lustre**: 开源并行文件系统，广泛用于HPC。
+- **GPFS**: IBM General Parallel File System（现名IBM Spectrum Scale）。
+- **S3**: Amazon Simple Storage Service（对象存储标准）。
+- **MDS**: Metadata Server（元数据服务器）。
+- **OSS**: Object Storage Server（对象存储服务器）。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

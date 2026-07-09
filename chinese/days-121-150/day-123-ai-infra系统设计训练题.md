@@ -1,38 +1,33 @@
-# 第123天：第123天：AI Infra系统设计训练题
+### Day 123: RDMA 基础与AI网络通信
+**1) 题目与考察核心**  
+深入RDMA技术，设计基于RDMA的GPU间和节点间通信架构，避免CPU介入和数据拷贝。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 通信模式：GPU Direct RDMA（GDR），实现GPU显存到远端GPU显存的直接传输。
+- 延迟目标：端到端（End-to-End）RDMA延迟 < 2 μs。
+- 吞吐量：单流带宽接近物理线速（如800 Gbps ≈ 100 GB/s）。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 架构组件：GPU -> NVLink/NVSwitch -> CPU PCIe -> NIC (支持GDR) -> 网络 -> 远端NIC -> CPU PCIe -> NVSwitch -> GPU。
+- 软件栈：UCX (Unified Communication X) 或 NCCL (NVIDIA Collective Communications Library) 底层基于RDMA。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- **GPU Direct RDMA (GDR)**: 允许NIC直接读写GPU HBM（High Bandwidth Memory），绕过CPU内存和PCIe瓶颈。
+- **UCX vs NCCL**: NCCL专注GPU集合通信（All-Reduce, All-Gather等）；UCX提供通用的RDMA通信原语，支持更灵活的拓扑和协议。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- GDR开启会增加GPU驱动和NIC驱动的耦合复杂度，且需主板和交换机支持；不使用GDR则需通过Host Memory（CPU RAM）中转，延迟和带宽大打折扣。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+对于万卡LLM训练，必须开启GPU Direct RDMA，并选用支持GDR的NIC（如NVIDIA Quantum-2 IB或Spectrum-X以太网交换机），底层通信库优先使用NCCL。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **RDMA**: Remote Direct Memory Access。
+- **GDR**: GPU Direct RDMA。
+- **HBM**: High Bandwidth Memory（高带宽内存，如H100的HBM3）。
+- **UCX**: Unified Communication X。
+- **NCCL**: NVIDIA Collective Communications Library。
+- **All-Reduce/All-Gather**: 分布式集合通信原语。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

@@ -1,38 +1,31 @@
-# 第136天：第136天：AI Infra系统设计训练题
+### Day 136: RDMA 语义：RDMAP, RC, UC, UD, XRC
+**1) 题目与考察核心**  
+深入RDMA通信原语与QP (Queue Pair) 类型，为不同AI通信模式选择合适的RDMA类型。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 通信模式：Point-to-Point (P2P), Broadcast, All-Reduce。
+- 要求：低延迟、高吞吐、可靠传输。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- **RC (Reliable Connection)**: 可靠连接，用于All-Reduce等需要可靠传输的集合通信。
+- **UC (Unreliable Connection)**: 无连接可靠投递（无重传），适合延迟敏感但可容忍少量丢包（通过上层重传）的场景。
+- **UD (Unreliable Datagram)**: 不可靠数据报，最低延迟，无连接。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- RC提供ACK和重传，UC/UD无重传。AI训练中的NCCL主要使用RC或UC（配合NCCL自身的可靠性机制）。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- RC可靠但延迟高、有ACK开销；UC/UD延迟低但需上层处理丢包。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+NCCL在InfiniBand/RoCEv2上默认使用RC保证可靠性，或通过UCX配置UC以优化延迟。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **QP**: Queue Pair（队列对，RDMA通信端点）。
+- **RC**: Reliable Connection（可靠连接）。
+- **UC**: Unreliable Connection（无连接可靠投递）。
+- **UD**: Unreliable Datagram（不可靠数据报）。
+- **XRC**: Extended Reliable Connection（扩展可靠连接，支持多QD）。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

@@ -1,38 +1,33 @@
-# Day 133: Day 133: AI Infra System Design Topic 133
+### Day 133: Object Storage for AI Workloads (S3, OCS, MinIO)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Object Storage for AI Workloads.
+- Core Examination Areas: Understanding S3-compatible object storage, its use cases in AI (data lakes, checkpoint archival), and performance considerations.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput**: Object storage should support 10+ GB/s aggregate throughput for large file uploads/downloads (e.g., model checkpoints, dataset ingestion).
+- **Latency**: Object storage API latency (put/get) for large objects should be <100 milliseconds for initiation, with throughput dominating total time.
+- **Durability**: Target 99.999999999% (11 nines) durability for model checkpoints and training data.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- *S3-Compatible Storage*: Amazon S3, IBM Cloud Object Storage (OCS), or self-hosted MinIO clusters that implement the S3 API.
+- *Data Lake Architecture*: Object storage serves as the central repository for raw data, processed datasets, and model artifacts, accessible by training, inference, and MLops pipelines.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *MinIO vs Cloud S3*: MinIO is a high-performance, self-hosted S3-compatible object storage server optimized for AI workloads and on-premises clusters. Cloud S3 offers managed durability and scalability but incurs egress costs and network latency.
+- *S3 API vs POSIX*: S3 uses a flat namespace and object-based access (put/get/delete), unlike POSIX file systems with hierarchical directories. AI data loaders must be adapted to use S3 SDKs or FUSE-based S3 mounts (e.g., s3fs, which has performance limitations).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Object Storage vs File Systems for Training Data*: Object storage is excellent for archival and data lake workflows but is not ideal for high-frequency, small-file training data loading due to S3 API latency and lack of POSIX semantics.
+- *Self-hosted vs Managed*: Self-hosted MinIO offers lower latency and no egress fees but requires operational overhead. Managed S3 offers durability and scale but at higher cost and potential network bottlenecks.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use a high-performance object storage system like MinIO for on-premises data lakes and checkpoint archival. Use cloud S3 for multi-region data storage and long-term archival. For active training data loading, use a distributed file system or a high-performance S3 gateway with caching.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **S3**: Simple Storage Service — Amazon's object storage service, which has become an industry standard API for object storage.
+- **OCS**: Object Storage Service — cloud-based object storage offerings (e.g., IBM Cloud Object Storage, Oracle Cloud Storage).
+- **FUSE**: Filesystem in Userspace — a software interface for operating systems that allows users to create their own file system without modifying the kernel code.
+
+---
+

@@ -1,38 +1,32 @@
-# Day 149: Day 149: AI Infra System Design Topic 149
+### Day 149: Advanced Scheduling: Reinforcement Learning for Scheduling, Predictive Scheduling
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Advanced Scheduling: Reinforcement Learning for Scheduling, Predictive Scheduling.
+- Core Examination Areas: Understanding how machine learning and reinforcement learning can be applied to optimize cluster scheduling, resource allocation, and job placement.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Scheduling Optimization Target**: Maximize cluster utilization, minimize job wait time, or maximize throughput (e.g., tokens/sec for LLM training).
+- **Prediction Accuracy**: Accuracy of job runtime or resource usage predictions. Target >80% accuracy for job duration prediction to improve gang scheduling and preemption decisions.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- *Reinforcement Learning (RL) Schedulers*: Schedulers that use RL agents to learn optimal placement and scheduling policies based on cluster state and job characteristics.
+- *Predictive Scheduling Components*: Machine learning models that predict job runtime, resource needs, or failure probability based on historical job metadata and cluster metrics.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *RL for Scheduling*: The RL agent observes the cluster state (available GPUs, queue length, job priorities) and takes actions (assign job to node, delay scheduling). Rewards are based on utilization, wait time, or throughput.
+- *Runtime Prediction Models*: Use historical job data (model size, batch size, GPU count) to train regression or sequence models that predict job completion time, enabling better gang scheduling and preemption.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *ML-based vs Heuristic Scheduling*: ML-based schedulers can adapt to complex, changing workloads but require training data, computational overhead for inference, and may be less interpretable. Heuristic schedulers (gang scheduling, fair share) are deterministic and easier to debug but may not optimize for complex, multi-objective goals.
+- *Prediction Overhead vs Benefit*: Runtime prediction models add scheduling latency and require maintenance. The benefit must outweigh the overhead in terms of improved utilization or reduced wait time.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For large, heterogeneous clusters with diverse workloads, explore RL-based or predictive schedulers for advanced optimization. Start with heuristic schedulers (Volcano, fair share) and add prediction models for job runtime or failure probability to enhance gang scheduling and preemption policies.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **RL**: Reinforcement Learning — a type of machine learning where an agent learns to make decisions by taking actions in an environment to maximize cumulative reward.
+- **Heuristic Scheduling**: Scheduling using rule-based or empirical strategies (e.g., first-fit, best-fit) rather than learned or optimized models.
+- **Metadata**: In the context of AI jobs, metadata includes job size, model type, GPU count, expected runtime, and resource requests.
+
+---
+

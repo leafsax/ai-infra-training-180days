@@ -1,38 +1,32 @@
-# 第124天：第124天：AI Infra系统设计训练题
+### Day 124: NVLink, NVSwitch 与 GPU 间互连
+**1) 题目与考察核心**  
+设计单机多卡（如8x H100）GPU间互连架构，最大化节点内通信带宽。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 节点配置：8x H100 GPU，2x CPU (AMD/Intel)。
+- 节点内带宽：NVLink 4.0，双向带宽 900 GB/s per GPU。
+- 延迟：GPU间通信延迟 < 1 μs。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 全互连拓扑：通过NVSwitch构建全连接（Full Mesh）或近全连接拓扑，确保任意两GPU间带宽达到900 GB/s。
+- 软件栈：CUDA Toolkit, NCCL配置使用NVLink而非PCIe。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- **NVLink vs PCIe**: NVLink带宽远高于PCIe Gen5（~32 GB/s双向），延迟更低。
+- **NVSwitch**: 允许多个GPU在节点内形成高速交换网络，避免PCIe总线瓶颈。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- NVSwitch增加节点成本和功耗，但极大提升分布式训练效率（特别是TP/PP并行时）。若使用低端服务器无NVSwitch，则GPU间通信被迫走PCIe，导致All-Reduce瓶颈。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+LLM训练必须采用支持NVSwitch的GPU服务器（如NVIDIA DGX H100），并确保NCCL配置识别NVLink拓扑（`NCCL_DEBUG=INFO`）。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **NVLink**: NVIDIA GPU间高速互连总线。
+- **NVSwitch**: NVIDIA基于NVLink的交换机芯片，实现多GPU全互连。
+- **PCIe**: Peripheral Component Interconnect Express。
+- **TP**: Tensor Parallelism（张量并行）。
+- **PP**: Pipeline Parallelism（流水线并行）。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

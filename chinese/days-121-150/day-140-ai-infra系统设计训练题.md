@@ -1,38 +1,28 @@
-# 第140天：第140天：AI Infra系统设计训练题
+### Day 140: AI集群网络监控与遥测（P4, eBPF）
+**1) 题目与考察核心**  
+设计AI集群网络监控与Telemetry（遥测）系统，实时检测网络拥塞和慢节点。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 监控指标：网卡吞吐、丢包率、PFC次数、ECN标记数、RTT。
+- 粒度：每秒/每端口指标。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- **P4可编程交换机**: 在交换机数据平面提取流量特征。
+- **eBPF**: 在主机内核层监控网络栈和RDMA性能。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- P4 vs eBPF：P4在交换机侧，eBPF在主机侧。结合使用实现端到端监控。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- P4需交换机支持且编程复杂；eBPF需内核支持且可能影响性能。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+使用交换机Vendor提供的Telemetry API（如NVIDIA Spectrum-X）结合主机eBPF工具（如`ibstatus`, `rdma-stat`）。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **Telemetry**: 遥测，远程测量和发送数据。
+- **P4**: Programming Protocol-independent Packet Processors。
+- **eBPF**: extended Berkeley Packet Filter。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

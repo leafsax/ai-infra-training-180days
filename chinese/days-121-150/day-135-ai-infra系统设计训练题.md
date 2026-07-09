@@ -1,38 +1,28 @@
-# 第135天：第135天：AI Infra系统设计训练题
+### Day 135: 弹性训练与动态资源扩展
+**1) 题目与考察核心**  
+设计Elastic Training（弹性训练）机制，支持训练过程中动态增减GPU资源。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 场景：集群资源紧张时，作业可动态缩容；资源释放时，可扩容。
+- 目标：训练过程不丢失进度，通信库支持动态拓扑变化。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 框架支持：PyTorch Elastic (`torch.distributed.elastic`), Ray Train。
+- 通信库支持：NCCL支持动态节点加入/离开（需重启或动态重配置）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- **Reconfiguration**: 动态改变All-Reduce树结构。
+- **Checkpoints + Resumption**: 缩容时保存Checkpoint，扩容后恢复。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- 弹性训练增加框架复杂度，且NCCL动态重配置可能需重启进程；静态分配更稳定但资源利用率低。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+对于长周期训练，优先采用静态Gang Scheduling；对于批处理或实验作业，使用PyTorch Elastic + 自动Checkpoint。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **Elastic Training**: 弹性训练，训练过程中动态调整资源。
+- **PyTorch Elastic**: PyTorch提供的弹性分布式训练库。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

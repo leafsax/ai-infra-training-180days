@@ -1,38 +1,35 @@
-# Day 132: Day 132: AI Infra System Design Topic 132
+### Day 132: Distributed File Systems for AI (Lustre, GPFS/IBM Spectrum Scale, CephFS)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Distributed File Systems for AI.
+- Core Examination Areas: Comparative analysis of Lustre, GPFS (IBM Spectrum Scale), and CephFS for AI workloads, focusing on throughput, scalability, and POSIX compliance.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Aggregate Throughput**: Target 100+ GB/s for a 1000-GPU cluster's training data file system.
+- **Metadata Server (MDS) Performance**: MDS should handle 10,000+ stat/open operations per second without becoming a bottleneck.
+- **Concurrent Clients**: Support for 1000+ concurrent GPU nodes reading/writing to the file system.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- *Lustre*: A parallel distributed file system that uses Object Storage Targets (OSTs) for data and Metadata Servers (MDS) for file metadata.
+- *GPFS (IBM Spectrum Scale)*: A high-performance file system that uses a distributed metadata architecture and direct client-to-object storage access.
+- *CephFS*: A POSIX-compliant file system built on the Ceph distributed object store, using Metadata Authorities (MDAs) and OSDs (Object Storage Daemons).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Lustre vs GPFS*: Lustre is widely adopted in HPC and AI, offering excellent scalability for large sequential workloads. GPFS offers strong consistency and is often used in financial and enterprise AI workloads. CephFS is more general-purpose but can have higher metadata latency under heavy concurrent access.
+- *Metadata Scaling*: In Lustre, multiple MDS instances and LDiskFS/GPFS backends are used to scale metadata operations. In CephFS, MDS clustering and tiered metadata can improve performance.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Lustre vs CephFS*: Lustre is optimized for high-throughput sequential I/O (ideal for AI data loading) but has a complex architecture with dedicated MDS and OST servers. CephFS is unified (data and metadata on same cluster) but can suffer from metadata bottlenecks at massive scale.
+- *GPFS vs Lustre*: GPFS offers better multi-site and consistency features, but Lustre has a larger ecosystem for AI/HPC workloads.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For large-scale AI training with high sequential throughput requirements, Lustre or GPFS are optimal. For more general-purpose, unified storage with object and file access, CephFS or a layered approach (Lustre for training, Ceph/S3 for archival) is recommended.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **MDS**: Metadata Server — in Lustre, the server that stores and manages file metadata (directories, file sizes, permissions).
+- **OST**: Object Storage Target — in Lustre, the server that stores the actual file data.
+- **OSD**: Object Storage Daemon — in Ceph, the process that stores data and handles data replication, recovery, and rebalancing.
+- **MDA**: Metadata Authority — in CephFS, the component that manages file and directory metadata.
+
+---
+

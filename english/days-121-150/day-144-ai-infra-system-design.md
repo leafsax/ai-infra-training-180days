@@ -1,38 +1,33 @@
-# Day 144: Day 144: AI Infra System Design Topic 144
+### Day 144: Multi-tenant Scheduling and Resource Isolation
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Multi-tenant Scheduling and Resource Isolation.
+- Core Examination Areas: Understanding how to schedule AI workloads for multiple teams or users (tenants) while ensuring fair resource allocation and isolation to prevent noisy neighbor effects.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Tenant Isolation**: Ensure that one tenant's workload does not degrade another tenant's performance beyond a defined SLA (e.g., <10% latency degradation).
+- **Fair Sharing Metrics**: Share metrics like "share target" (e.g., each tenant gets 20% of cluster GPUs) and "boost factor" (priority weighting for certain tenants).
+- **Quota Limits**: Maximum number of GPUs or CPU cores a tenant can request simultaneously.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- *Namespaces and Quotas*: Kubernetes namespaces with ResourceQuota and LimitRange objects to enforce per-tenant resource limits.
+- *Fair Share Schedulers*: Schedulers like Kube-Fairness or Yunikorn implement fair sharing algorithms (e.g., Dominant Resource Fairness - DRF) to allocate GPUs based on tenant claims and priorities.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Dominant Resource Fairness (DRF)*: A fair allocation algorithm that considers the dominant resource (e.g., GPUs vs CPU) for each job and ensures proportional sharing based on reported demands.
+- *Quality of Service (QoS) Classes*: Kubernetes QoS classes (Guaranteed, Burstable, BestEffort) can be used to prioritize eviction and resource allocation during contention.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Strict Quotas vs Flexible Sharing*: Strict quotas prevent overuse but can lead to underutilization if a tenant's quota is not fully used. Flexible sharing (fair share) improves utilization but requires careful tuning to prevent large jobs from starving small ones.
+- *Isolation vs Utilization*: Strong resource isolation (MIG, dedicated nodes) ensures performance but reduces overall cluster utilization. Soft isolation (time-slicing, fair share) improves utilization but risks noisy neighbor effects.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use Kubernetes namespaces with resource quotas for basic tenant isolation. For advanced fair sharing across multiple teams, deploy a fair-share scheduler like Yunikorn or Kube-Fairness with DRF. Use QoS classes and preemption policies to handle contention fairly.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **DRF**: Dominant Resource Fairness — a fair allocation algorithm that generalizes proportional share to multiple resource types.
+- **QoS**: Quality of Service — a Kubernetes classification (Guaranteed, Burstable, BestEffort) that determines how the scheduler and evictor treat Pods during resource contention.
+- **Namespace**: A Kubernetes mechanism for dividing cluster resources between multiple users or teams.
+
+---
+

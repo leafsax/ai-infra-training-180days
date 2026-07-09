@@ -1,38 +1,33 @@
-# Day 134: Day 134: AI Infra System Design Topic 134
+### Day 134: Block Storage and NVMe SSDs for High-Performance AI Training
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Block Storage and NVMe SSDs for High-Performance AI Training.
+- Core Examination Areas: Understanding the role of block storage and NVMe SSDs in AI infra, particularly for local GPU node storage, caching, and fast checkpointing.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **NVMe Throughput**: Target per-NVMe drive sequential read/write speeds of 5-7 GB/s for PCIe Gen4/Gen5 NVMe SSDs.
+- **Latency**: NVMe read/write latency should be <100 microseconds.
+- **Capacity**: Local node storage for caching or checkpointing should be 1-4 TB per GPU server.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- *Local NVMe Drives*: Installed directly into GPU servers via PCIe slots, used for local data caching, temporary checkpoints, or OS/application storage.
+- *NVMe over Fabrics (NVMe-oF)*: Allows NVMe drives to be accessed over a network (e.g., RoCEv2 or Fibre Channel), providing block-level storage with NVMe performance across the cluster.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Local NVMe vs Network Storage*: Local NVMe offers the lowest latency and highest throughput for node-local operations but is not shared across nodes. NVMe-oF provides shared block storage with NVMe performance but requires a low-latency network (RoCEv2/InfiniBand).
+- *NVMe-oF Protocols*: RoCEv2-based NVMe-oF (NVMe/RoCE) and Fibre Channel-based NVMe-oF (NVMe/FC) are the primary options for networked NVMe storage.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- *Local vs Networked NVMe*: Local NVMe is simpler and faster but lacks centralized management and cross-node sharing. Networked NVMe (NVMe-oF) enables shared fast storage but adds network complexity and requires RDMA-capable networks.
+- *Cost vs Performance*: NVMe SSDs are more expensive per GB than HDDs or even SATA SSDs, but are necessary for AI caching and low-latency checkpointing.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use local PCIe NVMe drives for node-local caching and temporary storage. For shared fast storage across the cluster, deploy NVMe-oF over RoCEv2 or InfiniBand if ultra-low latency block storage is required for distributed checkpointing.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of all nouns and abbreviations**
+- **NVMe-oF**: NVMe over Fabrics — a set of protocols that allow NVMe commands to be sent over network fabrics (InfiniBand, RoCE, TCP).
+- **NVMe/RoCE**: NVMe over RDMA over Converged Ethernet — using RoCEv2 networks to access NVMe storage.
+- **Fibre Channel (FC)**: A high-speed network technology primarily used for storage area networks (SANs).
+
+---
+

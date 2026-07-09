@@ -1,38 +1,32 @@
-# 第128天：第128天：AI Infra系统设计训练题
+### Day 128: 对象存储 vs 块存储 vs 文件存储 for AI
+**1) 题目与考察核心**  
+区分对象存储、块存储、文件存储在AI训练、微调、推理场景中的应用。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 训练数据：TB级文件，顺序读取为主。
+- 模型Checkpoint：GB级文件，需高可靠、低延迟写入。
+- 虚拟机/容器镜像：GB级，随机读取。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 文件存储（Lustre/NFS）：用于训练数据读取。
+- 对象存储（S3/OSS）：用于长期归档、Checkpoint异步备份。
+- 块存储（NVMe/SSD SAN）：用于虚拟机根盘、数据库。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- **NFS vs 并行文件系统**：NFS简单但并发性能差；并行文件系统吞吐高但复杂。
+- **S3异步上传**: 使用异步线程将Checkpoint写入S3，不阻塞训练主循环。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- 文件存储延迟低但扩展性差；对象存储扩展性强但随机读取延迟高；块存储性能高但无法多节点共享（除非SAN）。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+训练数据用并行文件系统，Checkpoint用本地NVMe + 异步S3备份，容器镜像用块存储或本地Registry。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **S3**: Amazon Simple Storage Service。
+- **NFS**: Network File System。
+- **Checkpoint**: 训练过程中保存的模型状态（权重、优化器状态等）。
+- **SAN**: Storage Area Network（存储区域网络）。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

@@ -1,38 +1,29 @@
-# 第146天：第146天：AI Infra系统设计训练题
+### Day 146: AI集群多租户与资源隔离
+**1) 题目与考察核心**  
+设计多租户AI集群的资源隔离与QoS机制。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 租户：多个团队/项目共享万卡集群。
+- 隔离目标：网络、存储、计算资源隔离，防止干扰。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- 计算隔离：K8s Namespace + Resource Quota。
+- 网络隔离：VLAN, VRF, 或IB Partition。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- IB Partition：InfiniBand硬件级网络隔离。
+- K8s Network Policies：软件定义网络隔离。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- 硬件隔离（IB Partition）安全但灵活度低；软件隔离灵活但可能有性能开销。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+关键生产租户使用IB Partition或独立Leaf Switch群；实验租户使用K8s Namespace+QoS。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **VLAN**: Virtual Local Area Network。
+- **VRF**: Virtual Routing and Forwarding。
+- **IB Partition**: InfiniBand Partition（物理/逻辑网络隔离）。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+

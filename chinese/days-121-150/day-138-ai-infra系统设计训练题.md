@@ -1,38 +1,29 @@
-# 第138天：第138天：AI Infra系统设计训练题
+### Day 138: RoCEv2 拥塞控制：PFC, ECN, DCQCN
+**1) 题目与考察核心**  
+设计RoCEv2无损网络的拥塞控制机制，避免PFC storm和吞吐下降。
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**2) 需求澄清与指标定义**  
+- 网络：800G RoCEv2以太网。
+- 目标：丢包率 < 10^-5，避免PFC死锁。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**3) 核心架构/技术组件设计**  
+- **PFC (Priority Flow Control)**: 链路层流控，按优先级暂停发送。
+- **ECN (Explicit Congestion Notification)**: 网络层拥塞标记，端点减速。
+- **DCQCN**: 结合PFC和ECN的拥塞控制算法。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**4) 关键技术深入与可能解**  
+- PFC Storm：一个端口触发PFC，导致上游端口也触发PFC，引发全网流控死锁。
+- ECN+DCQCN：交换机通过ECN标记数据包，发送端降低发送速率，避免PFC。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**5) Trade-off（权衡）分析**  
+- 纯PFC简单但易死锁；ECN+DCQCN复杂但稳定，需交换机和端点共同支持。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**6) 如何确定最优解**  
+RoCEv2无损网络推荐启用ECN+DCQCN，合理配置PFC优先级（仅数据流启用PFC，控制流禁用）。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**7) 名词和缩写解释**  
+- **DCQCN**: Data Center Quantized Congestion Notification。
+- **PFC Storm**: PFC流控风暴。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+---
+
