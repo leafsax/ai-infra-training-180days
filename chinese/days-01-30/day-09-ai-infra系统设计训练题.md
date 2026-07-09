@@ -1,38 +1,31 @@
-# 第9天：第9天：AI Infra系统设计训练题
+## 第9天：Batching策略（Static vs Dynamic vs Continuous Batching）
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计LLM推理引擎的调度器，最大化吞吐量同时保证延迟SLA。
+**考察核心**：对比Static Batching, Dynamic Batching, Continuous Batching（In-flight Batching）。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **请求到达率**：泊松分布，平均间隔 50ms。
+- **响应长度分布**：长短不一，平均1024 Token，P99为4096 Token。
+- **指标**：吞吐量 > 200k TPS，P99延迟 < 3s。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Scheduler Component**：维护就绪队列（Ready Queue）和运行中队列（Running Queue）。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Static Batching*：固定Batch size，需等待满Batch或超时，延迟高。
+- *Dynamic Batching*：动态收集请求到Batch，直到满Batch或超时，平衡延迟与吞吐。
+- *Continuous Batching (In-flight Batching)*：请求生成完成后立即从Batch中移除，新请求立即插入，无等待满Batch的开销。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *Dynamic vs Continuous*：Dynamic实现简单但存在Padding浪费和等待时间；Continuous Batching实现复杂（需支持动态KV Cache调整），但吞吐最高，Padding最少。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 现代LLM Serving（如vLLM, SGLang）均采用Continuous Batching架构，结合PagedAttention实现动态KV Cache管理。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Static Batching**：静态批处理，批次大小固定。
+- **Dynamic Batching**：动态批处理，根据到达情况和超时策略动态组合Batch。
+- **Continuous Batching (In-flight Batching)**：飞行中批处理，允许在生成过程中动态加入新请求或移除完成请求。
+
+---

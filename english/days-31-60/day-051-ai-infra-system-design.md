@@ -1,38 +1,33 @@
-# Day 51: Day 51: AI Infra System Design Topic 51
+## Day 51: AI Cluster Management - Kubernetes, Slurm, and GPU Scheduling
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Cluster Management and Orchestration for AI Workloads.
+**Core Examination Areas**: Kubernetes vs Slurm, GPU scheduling, and multi-tenancy support.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Job Type**: Training (long-running, full node) vs Inference (stateless, scalable).
+- **GPU Utilization Target**: >70% for training clusters.
+- **Queue System**: Manages job scheduling and resource allocation.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Slurm**: Traditional HPC scheduler, excellent for long-running training jobs and full-node allocations.
+- **Kubernetes (K8s)**: Cloud-native orchestration, excellent for inference services and microservices, with GPU operator support for GPU sharing.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Slurm for Training**: Simple node allocation, integrates well with MPI and distributed training frameworks.
+- **Kubernetes for Inference**: Auto-scaling, load balancing, and service discovery for LLM serving endpoints. GPU operators (e.g., NVIDIA GPU Operator) enable containerized GPU workloads.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **Slurm**: Best for HPC and large training jobs, but less flexible for microservices and auto-scaling.
+- **Kubernetes**: Best for inference and MLOps pipelines, but complex to configure for large-scale distributed training with MPI.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+Use Slurm for large-scale LLM training clusters and Kubernetes for inference serving and MLOps pipelines. Many organizations use a hybrid approach.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **Slurm**: A widely used open-source job scheduler for Linux clusters, commonly used in HPC and AI training environments.
+- **Kubernetes (K8s)**: An open-source container orchestration platform for automating deployment, scaling, and management of containerized applications.
+- **GPU Operator**: A Kubernetes tool (by NVIDIA) that simplifies the management of GPUs in Kubernetes clusters, including driver installation and device plugin management.
+
+---
+

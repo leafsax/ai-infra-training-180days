@@ -1,38 +1,31 @@
-# 第16天：第16天：AI Infra系统设计训练题
+## 第16天：分布式训练框架（DDP, FSDP, DeepSpeed）
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：选择并配置分布式训练框架以训练70B参数LLM。
+**考察核心**：对比PyTorch DDP, FSDP, DeepSpeed ZeRO。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **训练数据量**：1万亿Tokens。
+- **指标**：训练吞吐量 > 50k Tokens/s/GPU，显存效率 > 85%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Framework Selection**：选择PyTorch + FSDP 或 DeepSpeed。
+- **Compute Network**：GPU间使用NVLink/NCCL，节点间使用InfiniBand。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *DDP*：简单但显存占用高（完整模型副本）。
+- *FSDP*：PyTorch原生，支持ZeRO-3分片和Activation Checkpointing。
+- *DeepSpeed ZeRO*：功能丰富，支持ZeRO-1/2/3和Offload，但集成复杂度高。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *DDP vs FSDP/ZeRO*：DDP速度快但显存受限；FSDP/ZeRO显存效率高但通信和调度开销增加。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 对于70B+模型，默认选择PyTorch FSDP或DeepSpeed ZeRO-3，配合Activation Checkpointing以平衡显存与计算。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **DDP (Distributed Data Parallel)**：分布式数据并行，PyTorch基础并行策略。
+- **FSDP (Fully Sharded Data Parallel)**：PyTorch的完全分片数据并行实现。
+- **DeepSpeed**：微软开源的深度学习优化库，提供ZeRO、混合精度等优化。
+
+---

@@ -1,38 +1,33 @@
-# Day 21: Day 21: AI Infra System Design Topic 21
+## Day 21: Fine-tuning Infrastructure (LoRA, QLoRA, DPO)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Fine-tuning Infrastructure and Techniques.
+- **Core Examination Areas**: LoRA, QLoRA, DPO, and the infra requirements for fine-tuning LLMs.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Fine-tuning Batch Size**: e.g., 8-16 per GPU.
+- **LoRA Rank (r)**: e.g., r=8, r=16. Determines the size of the low-rank adaptation matrices.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Fine-tuning Cluster**: Similar to pre-training clusters but often with smaller batch sizes and focus on memory efficiency for optimizer states.
+- **LoRA Modules**: Insertable low-rank matrices into transformer layers (attention and FFN) that are trained while keeping base weights frozen.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **LoRA (Low-Rank Adaptation)**: A fine-tuning method that updates only a small number of parameters (low-rank matrices) instead of the full model, saving memory and compute.
+- **QLoRA (Quantized LoRA)**: Combines LoRA with 4-bit quantization of the base model, enabling fine-tuning of large models on single GPUs.
+- **DPO (Direct Preference Optimization)**: A fine-tuning method for aligning models with human preferences without needing a separate reward model.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Full Fine-tuning vs. LoRA/QLoRA**: Full fine-tuning adapts all parameters and may achieve higher performance but requires significant compute and memory. LoRA/QLoRA are resource-efficient but may have slightly lower performance on very complex tasks.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For most instruction-tuning or domain-adaptation tasks, use LoRA or QLoRA to minimize infra costs and time. Use full fine-tuning or DPO only when specific alignment or performance requirements demand it.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Fine-tuning**: The process of continuing to train a pre-trained model on a specific dataset or task to adapt it.
+- **LoRA (Low-Rank Adaptation)**: A parameter-efficient fine-tuning method that adds trainable low-rank matrices to existing model layers.
+- **QLoRA (Quantized LoRA)**: An extension of LoRA that uses 4-bit quantization of the base model to further reduce memory requirements.
+- **DPO (Direct Preference Optimization)**: A method for aligning LLMs with human preferences by directly optimizing against preference data, bypassing the need for a separate reward model.
+
+---
+

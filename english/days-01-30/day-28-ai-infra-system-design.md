@@ -1,38 +1,31 @@
-# Day 28: Day 28: AI Infra System Design Topic 28
+## Day 28: Security and Privacy in AI Infra
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Security and Privacy in AI Infrastructure.
+- **Core Examination Areas**: Model theft prevention, data leakage, secure serving, and access control.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Access Control Target**: RBAC (Role-Based Access Control) for model deployment and inference APIs.
+- **Data Encryption**: In-transit (TLS) and at-rest encryption for model weights and user data.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **API Security**: Authentication (OAuth, API keys), rate limiting, and input validation to prevent adversarial attacks.
+- **Model Encryption**: Storing model weights in encrypted form and decrypting in memory only (confidential computing).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Confidential Computing**: Using hardware-enforced secure enclaves (e.g., NVIDIA Confidential Computing, AMD SEV) to protect model weights and data in use.
+- **Watermarking**: Embedding detectable patterns in model outputs to prevent unauthorized model cloning or misuse.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Security vs. Performance**: Encryption and confidential computing introduce overhead that can increase latency and reduce throughput. Evaluate the sensitivity of the model and data to determine the necessary security level.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For sensitive or proprietary models, use confidential computing and encrypted storage/transit. Implement strict RBAC and rate limiting at the API gateway. Use watermarking for models where output cloning is a risk. Balance security measures with performance SLAs.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **RBAC (Role-Based Access Control)**: A security method that restricts system access based on the roles of individual users within an organization.
+- **TLS (Transport Layer Security)**: A cryptographic protocol designed to provide secure communication over a network.
+- **Confidential Computing**: A security framework that uses hardware-based trusted execution environments to protect data in use.
+
+---
+

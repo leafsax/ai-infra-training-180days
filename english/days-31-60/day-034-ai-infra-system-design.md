@@ -1,38 +1,33 @@
-# Day 34: Day 34: AI Infra System Design Topic 34
+## Day 34: LLM Serving - Data Parallelism (DP) and Distributed Inference
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Data Parallelism for Inference and Distributed Serving Architectures.
+**Core Examination Areas**: How Data Parallelism (DP) applies to inference (Model Parallelism + Data Parallelism), and distributed routing strategies.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **DP Degree**: Number of replicas of the model across different GPU groups (e.g., DP=2 means 2 full copies of the model on 2x TP=4 groups).
+- **Load Balancer**: Component that routes incoming requests to different model replicas.
+- **QPS per Replica**: Expected query load handled by each model instance.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Model Replicas**: Multiple identical copies of the model, each capable of serving requests independently.
+- **Request Router/Distributor**: Uses strategies like Round-Robin, Least-Connections, or KV-cache-aware routing to distribute requests to replicas.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Naive DP (Model Replication)**: Each replica has a full copy of the model. Simple load balancing (Round-Robin) works well if requests are similar in length.
+- **KV-Aware DP Routing**: Routes requests to the replica with the most available KV cache capacity or similar sequence lengths to optimize batching efficiency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **Naive DP**: Simple to implement, but may lead to unbalanced KV cache usage and suboptimal batching across replicas.
+- **KV-Aware Routing**: Complex to implement, requires state sharing among replicas, but maximizes overall system throughput.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For high-QPS production systems with variable request lengths, KV-aware routing or sequence-length-aware load balancing is optimal to ensure each DP replica achieves high continuous batching efficiency.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **Data Parallelism (DP)**: A distributed training/serve technique where full copies of the model are placed on different devices, and each device processes a different subset of the data (or in inference, handles a shard of the request traffic).
+- **Load Balancer**: A system or component that distributes incoming network traffic across multiple servers or model replicas to ensure no single resource is overwhelmed.
+- **KV-Aware Routing**: A load balancing strategy that considers the state of the KV cache across model replicas to make routing decisions that optimize batching and memory usage.
+
+---
+

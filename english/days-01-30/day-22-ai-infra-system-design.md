@@ -1,38 +1,33 @@
-# Day 22: Day 22: AI Infra System Design Topic 22
+## Day 22: Vector Databases and RAG Infrastructure
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Vector Databases and Retrieval-Augmented Generation (RAG) Infrastructure.
+- **Core Examination Areas**: Vector storage, similarity search, RAG pipeline components, and scaling vector search.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Vector Dimension**: e.g., 1536 dimensions for OpenAI embeddings, 4096 for Llama embeddings.
+- **Search Latency**: Target < 50ms for top-K similarity search over millions of vectors.
+- **QPS for Vector Search**: Target 1,000-5,000 QPS for retrieval endpoints.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **RAG Pipeline**: Document ingestion -> Chunking -> Embedding generation -> Vector storage -> Retrieval (similarity search) -> LLM generation with retrieved context.
+- **Vector Database**: Systems like Milvus, Pinecone, Qdrant, or Elasticsearch with vector search capabilities.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Approximate Nearest Neighbor (ANN)**: Algorithms (HNSW, IVF-PQ) that trade slight accuracy loss for massive speedups in vector similarity search compared to exact search.
+- **Embedding Serving**: Dedicated infrastructure to generate embeddings for incoming documents or queries at high throughput.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Exact vs. Approximate Search**: Exact search guarantees finding the true nearest neighbors but is too slow for large datasets. ANN (HNSW, etc.) offers sub-linear search time with high recall, suitable for RAG.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For RAG infrastructure, use a managed or self-hosted vector database supporting ANN search (e.g., Milvus, Qdrant, Pinecone). Ensure the embedding generation pipeline is scaled to handle ingestion QPS and that vector search latency meets RAG TTFT requirements.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **RAG (Retrieval-Augmented Generation)**: A technique where an LLM generates responses based on retrieved information from an external knowledge base, improving accuracy and reducing hallucinations.
+- **Vector Database**: A database optimized for storing and searching high-dimensional vectors, typically used for similarity search in RAG systems.
+- **ANN (Approximate Nearest Neighbor)**: Algorithms for finding vectors that are close to a query vector, approximating the result for faster search.
+- **HNSW (Hierarchical Navigable Small World)**: An ANN algorithm that uses a multi-layer graph structure for fast and accurate similarity search.
+
+---
+

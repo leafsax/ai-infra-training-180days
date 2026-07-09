@@ -1,38 +1,31 @@
-# 第14天：第14天：AI Infra系统设计训练题
+## 第14天：多模型与多租户隔离
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计支持多租户（Multi-tenant）和多模型共存的LLM Serving平台，保证SLA与隔离性。
+**考察核心**：租户隔离、优先级调度、资源配额（Quota）。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **租户A**：高优先级，要求TTFT < 200ms。
+- **租户B**：低优先级，批量处理任务，容忍TTFT < 2s。
+- **指标**：高优先级请求的P99延迟不受低优先级请求影响（隔离度 > 90%）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Queue Isolation**：为不同租户或优先级创建独立的请求队列。
+- **Resource Quotas**：基于GPU显存或Batch size限制租户资源使用。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Priority Batching*：在Continuous Batching中，优先调度高优先级请求的Token生成。
+- *Namespace Isolation*：在Kubernetes层面为租户分配独立的Node Pool或GPU Device。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *强隔离 vs 资源利用率*：强隔离（独立GPU节点）保证SLA但资源利用率低；共享GPU节点通过队列隔离提高利用率但存在干扰（Noisy Neighbor）。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 采用混合策略：核心租户分配专用GPU节点，普通租户共享GPU节点并通过Priority Scheduler和Quota进行软隔离。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Multi-tenant (多租户)**：多个用户或团队共享同一套基础设施。
+- **SLA (Service Level Agreement)**：服务级别协议，定义服务可用性、延迟等指标。
+- **Noisy Neighbor**：嘈杂的邻居，指共享资源时某个租户的高负载影响其他租户性能。
+
+---

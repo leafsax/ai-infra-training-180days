@@ -1,38 +1,33 @@
-# Day 47: Day 47: AI Infra System Design Topic 47
+## Day 47: AI Inference Optimization - Kernel Fusion and CUDA Optimization Basics
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Low-Level Inference Optimization.
+**Core Examination Areas**: Kernel fusion, CUDA basics, and memory access patterns for GPU acceleration.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Kernel**: A function executed on the GPU.
+- **Kernel Launch Overhead**: The CPU-to-GPU synchronization cost when starting a new kernel.
+- **Memory Coalescing**: Organizing memory accesses so that adjacent threads access adjacent memory addresses, maximizing bandwidth.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Computation Graph**: Represents the model's operations. Fusion combines multiple operations into a single kernel.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Kernel Fusion**: Combines multiple small kernels (e.g., Add + Activation) into one larger kernel to reduce memory read/write operations and kernel launch overhead.
+- **CUDA Optimization**: Writing or using optimized CUDA/cuBLAS/cuDNN kernels for specific operations like attention or matmul.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **Unfused Kernels**: Easier to debug and implement, but higher memory traffic and launch overhead.
+- **Fused Kernels**: Higher performance, but harder to debug and may increase GPU memory usage for intermediate buffers.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For production inference engines (vLLM, TensorRT-LLM), kernel fusion is standard and essential for achieving maximum throughput and minimum latency.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **Kernel (in GPU computing)**: A function that is executed on the GPU, typically in parallel across many threads.
+- **Kernel Fusion**: An optimization technique that combines multiple GPU kernels into a single kernel to reduce memory access and launch overhead.
+- **CUDA (Compute Unified Device Architecture)**: NVIDIA's parallel computing platform and programming model for utilizing GPUs for general-purpose processing.
+- **Memory Coalescing**: A GPU memory access pattern where adjacent threads access adjacent memory locations, maximizing memory bandwidth utilization.
+
+---
+

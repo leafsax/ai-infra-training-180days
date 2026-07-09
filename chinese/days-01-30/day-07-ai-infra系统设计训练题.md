@@ -1,38 +1,32 @@
-# 第7天：第7天：AI Infra系统设计训练题
+## 第7天：序列并行与上下文并行（Sequence/Context Parallelism）
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计支持超长上下文（如128K或256K Token）的LLM推理/训练系统。
+**考察核心**：理解Sequence Parallelism（序列并行）和Context Parallelism（上下文并行），如Ring Attention、DeepSpeed Ulysses。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **上下文长度**：128K Tokens。
+- **KV Cache显存**：128K长度下，单请求KV Cache可能占用数GB显存。
+- **指标**：长上下文推理TTFT < 2s，吞吐量下降不超过30%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Ring Attention Engine**：将序列切分在TP组内，通过Ring通信传递KV状态。
+- **FlashAttention集成**：使用内存高效的注意力计算内核。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Sequence Parallelism (SP)*：将单个序列的Token切分到多个GPU，每个GPU计算部分Token的Attention。
+- *Ring Attention*：通过环形通信在GPU间传递KV Cache，避免将所有KV Cache集中在单卡。
+- *DeepSpeed Ulysses*：基于序列并行的注意力优化，结合TP和SP。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *SP vs 增加显存*：SP引入额外通信开销（Ring通信），但允许在有限显存下处理超长序列。通信延迟可能成为瓶颈。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 对于>64K上下文，启用Ring Attention或FlashAttention-2 with context parallelism。根据节点内NVLink带宽评估SP的通信开销。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Sequence Parallelism (SP)**：序列并行，将单个请求的序列切分到多个GPU计算。
+- **Context Parallelism**：上下文并行，处理超长上下文时的并行策略。
+- **Ring Attention**：通过环形拓扑在GPU间分布和通信Attention的KV状态。
+
+---

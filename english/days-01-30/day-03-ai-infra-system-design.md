@@ -1,38 +1,33 @@
-# Day 3: Day 3: AI Infra System Design Topic 3
+## Day 3: Memory Hierarchy and HBM (High Bandwidth Memory)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Memory Hierarchy and High Bandwidth Memory in AI Systems.
+- **Core Examination Areas**: GPU memory hierarchy (registers, L1/L2 cache, HBM), memory bandwidth bottlenecks, and memory capacity planning.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **HBM Capacity**: e.g., 80GB per H100 GPU.
+- **Memory Bandwidth**: Target 3-4 TB/s for HBM3.
+- **Model Size**: e.g., a 70B parameter model in FP16 requires ~140GB of memory (2 bytes per parameter), necessitating multi-GPU or quantization.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **GPU Memory Hierarchy**: Registers (fastest, smallest) -> L1 Cache -> Shared Memory -> L2 Cache -> HBM (largest, high bandwidth).
+- **Memory Partitioning**: How model weights, KV Cache, and intermediate activations are distributed across GPU memory.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **HBM vs. GDDR6**: HBM uses a 3D-stacked design with a wide memory bus, offering significantly higher bandwidth but lower capacity per die compared to GDDR6.
+- **Memory Compression**: Techniques to reduce the memory footprint of activations or KV Cache.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Bandwidth vs. Capacity**: HBM offers exceptional bandwidth but limited capacity per GPU. GDDR offers higher capacity per chip but lower bandwidth. For LLMs, HBM is essential to avoid memory bandwidth bottlenecks during inference/training.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For LLM serving and training, select GPUs with the largest HBM capacity and highest bandwidth (e.g., H100 80GB). If model size exceeds single-GPU HBM capacity, employ model parallelism or quantization.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Memory Hierarchy**: The organization of memory storage in a computer system, balancing speed, capacity, and cost (registers -> caches -> RAM -> storage).
+- **HBM (High Bandwidth Memory)**: A type of DDR SDRAM with a 3D-stacked design, offering very high bandwidth for AI accelerators.
+- **GDDR6 (Graphics Double Data Rate 6)**: A type of memory commonly used in standard GPUs, offering high bandwidth but typically lower than HBM.
+- **L1/L2 Cache**: On-chip memory caches used to reduce the latency of accessing frequently used data from HBM.
+
+---
+

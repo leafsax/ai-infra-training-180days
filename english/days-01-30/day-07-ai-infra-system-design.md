@@ -1,38 +1,34 @@
-# Day 7: Day 7: AI Infra System Design Topic 7
+## Day 7: ZeRO Optimization and Memory Management in Training
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: ZeRO (Zero Redundancy Optimizer) and Memory Management in Training.
+- **Core Examination Areas**: ZeRO stages (1, 2, 3), optimizer state sharding, gradient sharding, and parameter sharding.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Memory Breakdown in Training**: Parameters (~40%), Gradients (~40%), Optimizer States (~20% for Adam).
+- **Target**: Fit a 70B model training within 80GB HBM per GPU using ZeRO-3.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **ZeRO-1**: Shards optimizer states across data parallel ranks.
+- **ZeRO-2**: Adds gradient sharding.
+- **ZeRO-3**: Adds parameter sharding; each GPU only stores the parameters it needs for the forward/backward pass.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **DeepSpeed ZeRO**: Microsoft's implementation of ZeRO optimizations.
+- **Offloading**: Moving optimizer states or parameters to CPU memory or NVMe storage to further reduce HBM pressure.
+- Comparative analysis: ZeRO-3 maximizes memory efficiency but increases communication overhead due to parameter gathering during forward/backward passes.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Memory Efficiency vs. Communication Overhead**: ZeRO-3 significantly reduces per-GPU memory usage but requires more frequent cross-GPU communication to gather sharded parameters. Offloading to CPU/NVMe reduces HBM pressure but introduces CPU/memory bandwidth bottlenecks.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- Start with ZeRO-2 for a good balance of memory savings and communication. Use ZeRO-3 when model parameters exceed GPU memory capacity. Use CPU/NVMe offloading only if HBM capacity is still insufficient and training speed can tolerate the overhead.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **ZeRO (Zero Redundancy Optimizer)**: A memory optimization technique that eliminates redundant copies of model states (parameters, gradients, optimizer states) across distributed training workers.
+- **ZeRO-1/2/3**: Stages of ZeRO optimization, progressively sharding optimizer states, gradients, and parameters, respectively.
+- **DeepSpeed**: A deep learning optimization library by Microsoft, famous for ZeRO and other memory/compute optimizations.
+- **Optimizer States**: Variables maintained by the optimizer (e.g., momentum, variance in Adam) which can consume significant memory.
+
+---
+

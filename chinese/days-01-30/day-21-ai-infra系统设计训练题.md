@@ -1,38 +1,33 @@
-# 第21天：第21天：AI Infra系统设计训练题
+## 第21天：推理与训练量化（INT8, INT4, AWQ, GPTQ, FP8）
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计模型量化pipeline，将70B模型量化为INT4/FP8以部署到推理集群。
+**考察核心**：PTQ（训练后量化），AWQ，GPTQ，FP8训练与推理。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **目标精度**：INT4或FP8。
+- **指标**：量化后模型PPL（困惑度）增加 < 1%，显存减少50%-75%，吞吐提升2x。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Quantization Engine**：使用llama.cpp, AutoAWQ, 或 Hugging Face `transformers` quantization API。
+- **Calibration Dataset**：用于调整量化参数的数百条样本数据。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *AWQ (Activation-aware Weight Quantization)*：根据激活值分布保护重要权重，INT4量化效果好。
+- *GPTQ*：基于二阶导数的量化算法，逐层量化权重，精度高但速度慢。
+- *FP8 (Float8)*：NVIDIA H100支持的8位浮点格式，训练和推理均支持，性能提升显著。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *INT4 vs FP8*：INT4显存节省最多但需专用硬件内核（如Tensor Core FP8或INT4）；FP8在H100上原生支持，训练和推理均可用，精度损失小。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 推理部署优先使用AWQ INT4或GPTQ INT4（兼容广泛硬件）；H100集群训练/推理优先使用FP8混合精度。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **PTQ (Post-Training Quantization)**：训练后量化。
+- **AWQ (Activation-aware Weight Quantization)**：感知激活的权重量化。
+- **GPTQ (Generative Pre-trained Transformer Quantization)**：基于二阶信息的量化算法。
+- **FP8 (Float8)**：8位浮点数格式，支持更高训练/推理吞吐。
+- **PPL (Perplexity)**：困惑度，衡量语言模型预测质量的指标。
+
+---

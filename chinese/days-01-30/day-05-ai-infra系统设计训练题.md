@@ -1,38 +1,32 @@
-# 第5天：第5天：AI Infra系统设计训练题
+## 第5天：张量并行（Tensor Parallelism）深入
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计并实现一个基于Megatron-LM的张量并行（TP）推理/训练引擎，支持70B模型在8卡节点内的切分。
+**考察核心**：理解TP中的列切分（Column-wise）、行切分（Row-wise）及Attention层的TP实现。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **TP Degree**：8路张量并行（TP=8），适用于单节点8卡（如HGX H100）。
+- **通信开销**：TP内部的All-Reduce通信延迟需控制在微秒级，带宽利用率 > 80%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Megatron-LM TP Core**：实现Linear层的列切分（Q/K/V投影）和行切分（Output投影）。
+- **All-Reduce通信池**：使用NCCL库管理TP间的通信流。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Linear层切分*：
+  - 列切分（Column-Parallel Linear）：输入相同，权重按列切分，输出需All-Reduce。
+  - 行切分（Row-Parallel Linear）：权重按行切分，输入需广播（Broadcast）或复制，输出无需All-Reduce。
+- *Attention TP*：Q/K/V投影采用列切分，Attention输出采用行切分。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *TP粒度*：TP=8通信频繁但单卡显存低；TP=1显存高但无法运行大模型。TP度越大，All-Reduce通信开销呈线性增加。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 通常TP度等于节点内GPU数量（如8或4），以利用NVLink全互联拓扑，最小化跨节点通信。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **All-Reduce**：分布式通信原语，所有GPU贡献数据，求和后分发到所有GPU。
+- **NCCL (NVIDIA Collective Communications Library)**：NVIDIA提供的分布式通信库，支持All-Reduce, All-Gather等。
+- **Column-Parallel / Row-Parallel Linear**：张量并行中线性层的两种切分方式。
+
+---

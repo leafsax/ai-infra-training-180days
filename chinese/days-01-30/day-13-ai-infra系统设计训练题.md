@@ -1,38 +1,29 @@
-# 第13天：第13天：AI Infra系统设计训练题
+## 第13天：请求路由与负载均衡
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计跨多节点LLM Serving集群的请求路由与负载均衡系统。
+**考察核心**：Load Balancing策略，Kubernetes Service, Istio, 自定义LLM Router。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **集群规模**：50个GPU节点，部署3个不同版本的模型。
+- **指标**：路由决策延迟 < 5ms，节点间负载偏差 < 10%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Global Router**：维护各Engine的Capacity（当前Batch size、排队请求数）。
+- **Health Check & Culling**：定期探测Engine健康状态，剔除过载节点。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Round-Robin vs Least-Requests*：轮询简单但不感知负载；最少请求数（Least Connections）更均衡但需维护状态。
+- *Capacity-based Routing*：根据GPU显存剩余量和计算负载进行路由。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *Stateless vs Stateful Router*：无状态Router（如DNS轮询）扩展性好但负载均衡粗糙；有状态Router精确但需处理Router自身的高可用。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 采用有状态LLM Router（如vLLM's Router or Text Generation Inference's router），结合gRPC健康检查与容量反馈。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Load Balancing (负载均衡)**：将网络或计算负载分布到多个服务器或节点上。
+- **Istio**：开源服务网格（Service Mesh），提供流量管理、安全和可观测性。
+
+---

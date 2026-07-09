@@ -1,38 +1,36 @@
-# Day 8: Day 8: AI Infra System Design Topic 8
+## Day 8: LLM Inference Serving Basics & Architecture
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: LLM Inference Serving Basics and Architecture.
+- **Core Examination Areas**: Request handling, model loading, inference engines, and serving scalability.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **QPS**: Target 500-2,000 QPS depending on model size and concurrency.
+- **TTFT (Time To First Token)**: Target < 300ms for good UX.
+- **Inter-Token Latency (ITL)**: Target < 50ms per token for smooth streaming.
+- **HBM Usage**: Must fit model weights, KV Cache, and working activations.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Serving Engine Components**: Request manager, scheduler, kernel executor (CUDA kernels), KV Cache manager.
+- **Stateless vs. Stateful Serving**: Stateless API frontends routing to stateful serving engines holding model state in GPU memory.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **vLLM vs. HuggingFace TGI vs. TensorRT-LLM**: 
+  - *vLLM*: PagedAttention, continuous batching, easy to deploy.
+  - *TGI*: HuggingFace ecosystem, good for open-source models, supports quantization.
+  - *TensorRT-LLM*: NVIDIA's highly optimized engine, requires model conversion, offers best raw performance.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Ease of Use vs. Raw Performance**: vLLM and TGI are easy to deploy and support dynamic model loading. TensorRT-LLM offers superior performance but requires a complex build and conversion process.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For rapid deployment and flexibility, use vLLM or TGI. For production environments where maximum throughput and lowest latency are critical, use TensorRT-LLM after model conversion and profiling.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **LLM Inference Serving**: The process of deploying trained LLMs to accept requests, generate responses, and return results to users.
+- **Request Manager**: The component in a serving engine that handles incoming API requests, validates them, and places them in a queue.
+- **Scheduler**: The component that decides which requests to execute next, often based on batching strategies and latency goals.
+- **ITL (Inter-Token Latency)**: The time delay between generating consecutive tokens in a sequence.
+
+---
+

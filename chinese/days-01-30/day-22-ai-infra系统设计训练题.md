@@ -1,38 +1,30 @@
-# 第22天：第22天：AI Infra系统设计训练题
+## 第22天：推测解码（Speculative Decoding）与Early Exiting
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计Speculative Decoding系统以加速LLM推理生成速度。
+**考察核心**：Draft Model（草稿模型），Tree Attention，验证与接受机制。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **目标加速比**：2x - 3x 生成速度。
+- **指标**：TTFT增加 < 20%，每Token延迟降低50%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Draft Model + Target Model**：使用小模型（如Llama-3-8B）生成候选Token，大模型（Llama-3-70B）进行并行验证。
+- **Verification Engine**：并行计算小模型生成序列的Logits并比对。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Speculative Decoding*：小模型快速生成k个候选Token，大模型一次性验证这k个Token。若全部匹配，则接受k个；若部分匹配，接受匹配部分并重算。
+- *Tree Attention*：扩展Speculative Decoding，支持树状结构的候选验证。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *Draft Model选择*：Draft模型需与Target模型架构相似以保证高接受率，但计算资源需额外分配。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 选择同系列但参数较小的模型作为Draft Model（如70B的Target用7B或8B的Draft），并确保两者Tokenizer一致。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Speculative Decoding (推测解码)**：使用小模型生成候选序列，大模型验证以加速生成的技术。
+- **Draft Model (草稿模型)**：用于生成候选Token的小模型。
+- **Target Model (目标模型)**：最终验证并输出高质量结果的大模型。
+
+---

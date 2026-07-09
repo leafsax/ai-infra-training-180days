@@ -1,38 +1,35 @@
-# Day 5: Day 5: AI Infra System Design Topic 5
+## Day 5: Distributed Training Fundamentals - Data Parallelism
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Distributed Training Fundamentals - Data Parallelism (DP).
+- **Core Examination Areas**: How data parallelism works, gradient synchronization, and performance bottlenecks in DP training.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Batch Size per GPU (Microbatch)**: e.g., 32 sequences per GPU.
+- **Global Batch Size**: Microbatch size × Number of GPUs.
+- **Synchronization Latency**: Time taken for All-Reduce operations to synchronize gradients across GPUs.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Data Parallelism Architecture**: Each GPU holds a full copy of the model. Data is sharded across GPUs. Each GPU computes gradients on its shard, and gradients are synchronized via All-Reduce.
+- **Distributed Data Parallel (DDP)**: A PyTorch mechanism for implementing data parallelism.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Gradient Synchronization**: Uses All-Reduce operations (implemented via NCCL - NVIDIA Collective Communications Library).
+- **Gradient Accumulation**: Used when the global batch size is too large to fit in memory; gradients are accumulated over several micro-batches before synchronization.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Communication vs. Computation Overlap**: In DP, communication (gradient sync) can become the bottleneck if the model is small or the network is slow. Overlapping communication with computation (via pipelining or asynchronous updates) can mitigate this.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For models that fit on a single GPU, start with Data Parallelism (DDP). Ensure the network interconnect (InfiniBand/RoCE) has sufficient bandwidth to handle the All-Reduce traffic for the chosen global batch size and model gradient size.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Data Parallelism (DP)**: A distributed training strategy where each worker holds a copy of the model and processes a different shard of the data.
+- **Gradient Synchronization**: The process of aggregating gradients computed by different GPUs to ensure model consistency.
+- **All-Reduce**: A collective communication operation that computes a reduction (e.g., sum) of data across all processes and distributes the result to all.
+- **DDP (Distributed Data Parallel)**: A PyTorch module for performing data-parallel training.
+- **NCCL (NVIDIA Collective Communications Library)**: A library providing standard collective communication operations (All-Reduce, Broadcast, etc.) optimized for NVIDIA GPUs.
+- **Microbatch**: A smaller batch of data processed by a single GPU before gradient accumulation or synchronization.
+
+---
+

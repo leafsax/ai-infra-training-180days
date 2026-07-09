@@ -1,38 +1,32 @@
-# Day 13: Day 13: AI Infra System Design Topic 13
+## Day 13: Speculative Decoding and Accelerated Inference
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Speculative Decoding and Inference Acceleration.
+- **Core Examination Areas**: How speculative decoding works, draft models, verification, and speedup ratios.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Speedup Target**: 2x-3x inference speedup for generation-heavy workloads.
+- **Acceptance Rate**: Percentage of draft tokens accepted by the large model. Target > 50% for effective speedup.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Two-Model Architecture**: A small "draft" model (e.g., 7B) generates candidate tokens, and a large "target" model (e.g., 70B) verifies them in parallel.
+- **Verification Kernel**: A specialized kernel that checks multiple draft tokens against the target model's KV Cache in a single forward pass.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Speculative Decoding**: The draft model generates N tokens. The target model evaluates these N tokens plus the next token in a single forward pass (using continuous batching principles). Accepted tokens are committed; a mismatch causes rollback to the last accepted token.
+- **Draft Model Selection**: Must be fast to generate and highly correlated with the target model's output distribution.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Accuracy vs. Speed**: Speculative decoding maintains the target model's exact output distribution (no accuracy loss) but requires additional infrastructure (draft model) and may increase TTFT if the draft model is slow or acceptance rate is low.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- Use speculative decoding when generation latency is a primary bottleneck and a suitable draft model (e.g., a quantized or smaller version of the target model) is available. Ensure the serving engine supports speculative decoding kernels (e.g., vLLM's speculative decoding, TensorRT-LLM's beam search decoding).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Speculative Decoding**: An inference acceleration technique where a smaller draft model generates candidate tokens that are verified by the larger target model in parallel.
+- **Draft Model**: A smaller, faster model used to generate speculative tokens in speculative decoding.
+- **Target Model**: The primary, larger model that verifies and finalizes the generated tokens.
+- **Acceptance Rate**: The proportion of draft tokens that are accepted by the target model during verification.
+
+---
+

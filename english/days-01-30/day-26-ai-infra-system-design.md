@@ -1,38 +1,30 @@
-# Day 26: Day 26: AI Infra System Design Topic 26
+## Day 26: Cost Optimization and Right-sizing in AI Clusters
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Cost Optimization and Right-sizing.
+- **Core Examination Areas**: GPU cost per token, right-sizing model sizes to hardware, and idle resource management.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Cost per 1M Tokens**: Metric to compare inference cost across different models and hardware.
+- **Utilization Target**: > 60% GPU SM utilization and > 70% HBM utilization for cost-effective serving.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Auto-scaling**: Scaling serving replicas based on queue length or QPS metrics.
+- **Spot Instances / Preemptible GPUs**: Using cheaper, interruptible cloud GPUs for training or non-production serving.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Model Right-sizing**: Choosing the smallest model that meets accuracy/UX requirements to minimize HBM and compute costs.
+- **Quantization and Sparsity**: Reducing model size and compute requirements to lower hardware costs.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Performance vs. Cost**: Larger models and unquantized FP16/BF16 serve offer the best performance but at higher cost. Quantized models and right-sized architectures reduce cost but may sacrifice some accuracy or throughput.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- Conduct cost-performance benchmarks: measure cost per 1M tokens and TTFT/TP99 for different model sizes and quantization levels. Choose the configuration that meets SLA requirements at the lowest cost. Use auto-scaling and spot instances where appropriate.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Right-sizing**: Selecting the appropriate model size and hardware configuration to meet performance requirements without over-provisioning resources.
+- **Spot/Preemptible Instances**: Cloud computing instances that are sold at a discount but can be terminated by the provider with short notice.
+
+---
+

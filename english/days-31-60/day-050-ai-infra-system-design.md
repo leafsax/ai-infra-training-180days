@@ -1,38 +1,33 @@
-# Day 50: Day 50: AI Infra System Design Topic 50
+## Day 50: Fault Tolerance and Checkpointing in Large-Scale AI Training
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Fault Tolerance Mechanisms for LLM Training.
+**Core Examination Areas**: Checkpointing strategies, failure recovery, and minimizing downtime in 1000+ GPU clusters.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **RTO (Recovery Time Objective)**: Target time to recover from a failure (e.g., < 30 minutes).
+- **Checkpoint Frequency**: e.g., every 1000 steps or every 1 hour.
+- **Failure Rate**: In a 1000-GPU cluster, the probability of at least one GPU failing per day is high (often >50%).
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Checkpoint Storage**: High-speed distributed storage (NVMe cluster or optimized S3) for saving model states, optimizer states, and train state.
+- **Watchdog/Health Check Service**: Monitors GPU and node health, triggers checkpointing before failure.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Synchronous Checkpointing**: Stops training to save state. Accurate but causes downtime.
+- **Asynchronous/Incremental Checkpointing**: Saves only changed states or uses ZeRO-Infinity to offload states to CPU/NVMe, reducing checkpoint time.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **Frequent Checkpointing**: Low recovery time, but high storage I/O overhead and training pause.
+- **Infrequent Checkpointing**: Less I/O overhead, but higher risk of losing more work if a failure occurs.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For large clusters, use incremental checkpointing with ZeRO-3/Infinity and a balanced checkpoint frequency (e.g., every 1-2 hours) to minimize both I/O overhead and recovery loss.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **Checkpointing**: The process of saving the state of a training job (model weights, optimizer states, step number) to storage to enable recovery from failures.
+- **RTO (Recovery Time Objective)**: The target duration of time within which a business process must be restored after a disaster or failure.
+- **ZeRO-Infinity**: An extension of DeepSpeed ZeRO that offloads sharded parameters, gradients, and optimizer states to CPU memory and NVMe storage, enabling training of extremely large models.
+
+---
+

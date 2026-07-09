@@ -1,38 +1,32 @@
-# Day 17: Day 17: AI Infra System Design Topic 17
+## Day 17: Storage Systems for AI (Checkpointing, Dataset Storage)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Storage Systems for AI Training and Serving.
+- **Core Examination Areas**: Checkpoint storage, dataset storage, NVMe SSDs, and distributed file systems.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Checkpoint Frequency**: e.g., every 500 steps or every 1 hour.
+- **Checkpoint Size**: e.g., 70B model in FP16 with optimizer states can be 300GB-500GB per checkpoint.
+- **Storage Throughput**: Target > 10 GB/s for distributed checkpoint saving/loading.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Distributed File System**: e.g., NFS, GPFS, or cloud-native storage (S3, EFS) for storing checkpoints and datasets.
+- **Fast Local Storage**: NVMe SSDs on training nodes for temporary staging of checkpoints and datasets.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Async Checkpointing**: Saving checkpoints asynchronously to avoid blocking training steps.
+- **Sharded Checkpoints**: Saving model state in shards across multiple storage nodes to maximize write/read bandwidth.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Speed vs. Durability**: Local NVMe storage offers high speed for checkpoint staging but risks data loss if the node fails. Distributed storage (S3, NFS) is durable but may have higher latency and lower throughput unless specifically optimized (e.g., using parallel file systems).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- Use a hybrid approach: Stage checkpoints on local NVMe SSDs and then asynchronously copy them to a durable distributed storage system (S3, NFS) or use framework-native distributed checkpointing (e.g., DeepSpeed, PyTorch FSDP) that shards and parallelizes checkpoint I/O.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Checkpoint**: A saved state of a training process (model weights, optimizer states, step number) used for recovery or evaluation.
+- **NVMe (Non-Volatile Memory Express)**: A high-speed interface for SSDs, offering much higher throughput and lower latency than SATA or SAS.
+- **FSDP (Fully Sharded Data Parallel)**: A PyTorch technique (similar to ZeRO-3) that shards model states across data parallel workers to reduce memory usage.
+
+---
+

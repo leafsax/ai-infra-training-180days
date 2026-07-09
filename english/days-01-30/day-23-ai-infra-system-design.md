@@ -1,38 +1,30 @@
-# Day 23: Day 23: AI Infra System Design Topic 23
+## Day 23: Embedding Serving and Similarity Search
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Embedding Serving and Similarity Search Infrastructure.
+- **Core Examination Areas**: High-throughput embedding model serving, batch embedding generation, and integration with vector search.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Embedding Model Size**: e.g., 7B parameter embedding model or smaller (330M parameters).
+- **Embedding Generation Throughput**: Target 10,000-50,000 documents/sec for ingestion pipelines.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Embedding Serving Engine**: Similar to LLM serving but optimized for short text and high concurrency. Often uses the same engines (vLLM, TGI) but with different batching strategies.
+- **Batch Embedding Generation**: Grouping documents into batches for efficient GPU utilization during embedding creation.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Embedding Model Optimization**: Using quantization (INT8/FP16) and optimized kernels for matrix multiplications in embedding layers.
+- **Throughput vs. Latency in Embedding Serving**: Batching improves throughput for ingestion but may increase latency for real-time query embedding generation.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **Real-time vs. Batch Embedding**: Real-time embedding serving is needed for query embeddings in RAG but must be low-latency. Batch embedding is used for document ingestion and can be optimized for throughput rather than individual request latency.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- Use high-throughput serving engines (vLLM, TensorRT-LLM) for embedding models. Separate infrastructure for batch document embedding (ingestion) and low-latency query embedding (serving) to optimize for their respective SLAs.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **Embedding**: A dense vector representation of text, image, or other data, used to capture semantic meaning for similarity search.
+- **Embedding Model**: A machine learning model specifically trained to generate embeddings for inputs like text or images.
+
+---
+

@@ -1,38 +1,29 @@
-# 第18天：第18天：AI Infra系统设计训练题
+## 第18天：Checkpointing与恢复机制
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：设计千亿参数模型的分布式Checkpoint与恢复系统。
+**考察核心**：Checkpoint格式（Sharded vs Unified），异步保存，存储选型。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **Checkpoint大小**：70B模型FP16约140GB，加上优化器状态可达500GB+。
+- **指标**：Checkpoint保存时间 < 5分钟，恢复时间 < 3分钟。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Sharded Checkpointing**：每个GPU保存自己分片的权重，最后合并或分布式加载。
+- **Storage Backend**：使用高性能分布式文件系统（Ceph, NFS）或对象存储（S3）+ 缓存层。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *Unified Checkpoint*：所有GPU将分片写入一个统一格式文件，便于跨框架加载（如Hugging Face format）。
+- *Async Checkpointing*：在后台线程保存Checkpoint，不阻塞训练步。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *Sharded vs Unified*：Sharded保存快但跨框架迁移麻烦；Unified格式标准但合并开销大。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 训练期间使用Sharded Checkpoint以最小化停顿，定期转换为Unified格式用于模型发布和跨框架推理。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **Checkpoint (检查点)**：训练过程中保存的模型状态（权重、优化器状态、步数），用于恢复或推理。
+- **Sharded Checkpoint**：分片检查点，每个设备保存部分状态。
+
+---

@@ -1,38 +1,33 @@
-# Day 45: Day 45: AI Infra System Design Topic 45
+## Day 45: Vector Databases and Embedding Serving Infrastructure
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Vector Database Infrastructure and Embedding Service Scaling.
+**Core Examination Areas**: Vector DB architectures (HNSW, IVF), embedding model serving, and throughput/latency trade-offs.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Vector Dimension**: e.g., 1536 or 3072.
+- **HNSW (Hierarchical Navigable Small World)**: A graph-based indexing algorithm for approximate nearest neighbor (ANN) search.
+- **Latency Target**: p99 vector search latency < 50ms for 10M vectors.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Embedding Serving Engine**: Serves the embedding model (e.g., using vLLM or TorchServe) to convert text chunks to vectors.
+- **Vector DB Cluster**: Distributes vector indices and data across multiple nodes for horizontal scaling.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **HNSW Index**: Provides high recall and low latency for ANN search but requires significant memory (10-20x the size of raw vectors).
+- **IVF (Inverted File Index)**: Clusters vectors into centroids; search is performed within relevant clusters. More memory-efficient than HNSW but higher latency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **HNSW**: Best latency and recall, but high memory cost.
+- **IVF**: Lower memory usage, but higher latency and potentially lower recall.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For RAG systems requiring sub-100ms latency and high recall with available memory, HNSW is optimal. For very large vector sets with strict memory constraints, IVF or product quantization is preferred.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **HNSW (Hierarchical Navigable Small World)**: A graph-based algorithm for approximate nearest neighbor search that provides fast and accurate vector similarity search.
+- **IVF (Inverted File Index)**: A vector indexing method that partitions vectors into clusters (centroids) and searches only within the nearest clusters to reduce computation.
+- **ANN (Approximate Nearest Neighbor)**: A search method that finds vectors similar to a query vector with high probability, but not guaranteed to be the absolute closest.
+
+---
+

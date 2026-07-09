@@ -1,38 +1,33 @@
-# Day 40: Day 40: AI Infra System Design Topic 40
+## Day 40: Storage Systems for AI - High-Speed Storage (NVMe, GPUDirect Storage)
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: AI Storage Infrastructure and Data Loading Optimization.
+**Core Examination Areas**: NVMe SSDs, storage throughput for training data, and GPUDirect Storage (GDS).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Storage Throughput**: e.g., 10-20 GB/s per node for training data loading.
+- **IOPS (Input/Output Operations Per Second)**: Measure of storage device's ability to handle random read/write operations.
+- **Checkpoint Size**: e.g., 70B model checkpoint in BF16 is ~140GB, plus optimizer states can exceed 500GB. Checkpoint I/O must be fast to not bottleneck training.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **NVMe SSDs**: High-speed storage devices connected via PCIe, offering 5-7 GB/s read speeds per drive.
+- **Parallel File Systems**: e.g., Lustre, GPFS, or cloud-native object storage (S3) with high-throughput access.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Standard CPU-mediated I/O**: Data moves from storage -> CPU memory -> GPU memory. Introduces latency and CPU overhead.
+- **GPUDirect Storage (GDS)**: Allows NVMe drives to transfer data directly to GPU memory via PCIe, bypassing CPU memory and reducing latency and CPU utilization.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **CPU-mediated I/O**: Simpler to set up, but CPU becomes a bottleneck for data loading at scale.
+- **GPUDirect Storage**: Requires compatible GPUs, NVMe drives, and storage drivers, but significantly improves data loading throughput and reduces training idle time.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For large-scale LLM training with high data throughput requirements, GPUDirect Storage combined with high-speed NVMe or parallel file systems is optimal.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **NVMe (Non-Volatile Memory Express)**: A high-speed storage interface protocol designed for flash memory (SSDs) connected via PCIe.
+- **IOPS (Input/Output Operations Per Second)**: A metric that measures the number of read or write operations a storage device can perform per second.
+- **GPUDirect Storage (GDS)**: A technology that enables direct data transfers between storage devices (like NVMe SSDs) and GPU memory, bypassing the host CPU and system RAM.
+
+---
+

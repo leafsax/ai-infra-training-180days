@@ -1,38 +1,30 @@
-# 第27天：第27天：AI Infra系统设计训练题
+## 第27天：自定义内核与CUDA优化基础
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+### 1) 题目与考察核心
+**题目**：为特定LLM操作编写自定义CUDA/Triton内核以优化性能。
+**考察核心**：CUDA编程基础，Triton语言，内存访问模式优化。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+### 2) 需求澄清与指标定义
+- **优化目标**：自定义Layer（如特殊Normalization）速度提升2x。
+- **指标**：内核执行时间 < 100µs，内存带宽利用率 > 80%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+### 3) 核心架构/技术组件设计
+- **Triton Kernel Development**：使用Triton DSL编写内核，编译为SASS/PTX部署到GPU。
+- **Memory Coalescing**：优化全局内存访问模式以实现合并访问。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+### 4) 关键技术深入与可能解
+- *CUDA C++ vs Triton*：CUDA C++灵活但编写复杂；Triton抽象层次高，易于编写高效的Attention或Normalization内核。
+- *Shared Memory Usage*：充分利用GPU的Shared Memory（SRAM）减少全局内存访问。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+### 5) Trade-off（权衡）分析
+- *通用性 vs 性能*：自定义内核性能极致但难以维护且需针对特定硬件（如H100 vs A100）调整；使用通用库（如CUTLASS）可移植性好但非绝对最优。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+### 6) 如何确定最优解
+- 优先使用成熟库（FlashAttention, Triton built-ins）；仅在现有库无法满足特定操作（如自定义激活函数）时编写Triton内核。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+### 7) 名词和缩写全称及解释
+- **CUDA (Compute Unified Device Architecture)**：NVIDIA的并行计算平台和编程模型。
+- **Triton DSL**：Triton领域特定语言，用于编写GPU内核。
+- **Memory Coalescing**：内存合并访问，GPU线程以连续方式访问全局内存以提高带宽利用率。
+
+---

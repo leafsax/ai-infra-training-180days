@@ -1,38 +1,32 @@
-# Day 56: Day 56: AI Infra System Design Topic 56
+## Day 56: Multi-Instance GPU (MIG) and GPU Partitioning for Multi-Tenancy
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: GPU Virtualization and Multi-Tenancy.
+**Core Examination Areas**: MIG (Multi-Instance GPU), GPU partitioning, and isolation for shared infrastructure.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **GPU Partitioning**: Splitting a single GPU into multiple isolated instances.
+- **MIG Instances**: e.g., on an A100 80GB, MIG can create up to 7 instances of varying memory/compute configurations (e.g., 3g.20gb).
+- **Tenancy Isolation**: Ensuring one tenant's workload does not impact another's performance or security.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **MIG Controller**: Manages the creation, configuration, and isolation of GPU instances.
+- **Container Integration**: Kubernetes or Docker can schedule workloads on specific MIG instances.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **MIG (Multi-Instance GPU)**: Partitions a GPU into separate instances, each with its own memory, compute cores, and cache. Provides hardware-level isolation.
+- **Time-Slicing**: Software-based GPU sharing where multiple containers share the same GPU by alternating execution time. Lower isolation, but more flexible.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **MIG**: Strong hardware isolation, deterministic performance, but reduces flexibility (fixed partitions).
+- **Time-Slicing**: Flexible resource sharing, but no hardware isolation and potential performance interference.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For multi-tenant cloud inference or fine-tuning services requiring strict SLAs and isolation, MIG is optimal. For internal shared development GPUs, time-slicing may suffice.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **MIG (Multi-Instance GPU)**: A technology (primarily on NVIDIA A100/H100 GPUs) that partitions a single GPU into multiple isolated instances, each with dedicated memory and compute resources.
+- **Time-Slicing**: A GPU sharing technique where multiple workloads share a single GPU by taking turns using its compute resources in time intervals.
+
+---
+

@@ -1,38 +1,36 @@
-# Day 4: Day 4: AI Infra System Design Topic 4
+## Day 4: Network Interconnects for AI Clusters
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+- **Topic**: Network Interconnects for AI Clusters.
+- **Core Examination Areas**: InfiniBand, Ethernet (RoCE v2), network topology (Fat-Tree, Dragonfly), and network bandwidth/latency requirements for distributed training and serving.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Network Bandwidth**: Target 400 Gbps or 800 Gbps per node for training clusters.
+- **Network Latency**: Target < 1 microsecond for InfiniBand RDMA operations.
+- **All-Reduce Performance**: Critical metric for distributed training synchronization.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Network Topology**: Fat-Tree topology for uniform bandwidth between any two nodes; Dragonfly for scaling to thousands of nodes.
+- **Interconnect Technologies**: InfiniBand (proprietary, low latency, high bandwidth) vs. Ethernet with RoCE v2 (RDMA over Converged Ethernet).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **InfiniBand vs. RoCE v2**: InfiniBand offers native RDMA, low latency, and lossless networking (via FCV). RoCE v2 runs RDMA over standard Ethernet, requiring DCQCN or PFC for lossless networking.
+- **RDMA (Remote Direct Memory Access)**: Allows data to be sent directly from the memory of one computer to another without involving the CPU of either.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off analysis
+- **InfiniBand vs. Ethernet/RoCE**: InfiniBand offers superior out-of-the-box performance and lossless networking but is more expensive and vendor-locked (Cisco/Mellanox). RoCE v2 uses commodity Ethernet hardware, reducing cost but requiring careful network tuning (PFC, ECN) to avoid congestion and packet loss.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to determine the optimal solution
+- For large-scale distributed training (1000+ GPUs), InfiniBand is often preferred for its proven low-latency, lossless properties. For serving clusters or smaller training clusters, high-speed Ethernet (200G/400G) with RoCE v2 or TCP/IP is often sufficient and more cost-effective.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full names and explanations of nouns and abbreviations
+- **InfiniBand**: A high-performance networking technology used in high-performance computing (HPC) and AI clusters, supporting RDMA.
+- **RoCE v2 (RDMA over Converged Ethernet version 2)**: A protocol that allows RDMA operations to be carried over IP networks (Ethernet).
+- **RDMA (Remote Direct Memory Access)**: A network technology that enables data exchange between computer memories without CPU involvement.
+- **Fat-Tree Topology**: A network topology designed to provide high bandwidth and multiple paths between any two nodes, minimizing congestion.
+- **All-Reduce**: A distributed computing operation where all nodes contribute data, the data is aggregated (e.g., summed), and the result is distributed to all nodes.
+- **PFC (Priority-based Flow Control)**: A link-level flow control mechanism in Ethernet to prevent packet loss due to congestion.
+- **ECN (Explicit Congestion Notification)**: A network feature that allows endpoints to be notified of emerging congestion without packet drops.
+
+---
+
