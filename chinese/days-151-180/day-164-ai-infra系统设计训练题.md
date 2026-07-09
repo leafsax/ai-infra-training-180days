@@ -1,38 +1,32 @@
-# 第164天：第164天：AI Infra系统设计训练题
+### Day 164: 存储成本优化：数据湖与Checkpoint管理 (Storage Cost Optimization)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+优化AI训练和推理的存储成本。考察核心：数据湖架构、Checkpoint压缩与生命周期管理。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：大规模分布式训练，每日生成 TB 级 Checkpoint。
+- **存储成本目标**：Checkpoint存储成本降低 60%。
+- **Checkpoint恢复时间**：< 10分钟（对于 100GB 模型）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 分层存储架构：热数据（NVMe/SSD）-> 温数据（HDD/对象存储）-> 冷数据（归档存储）。
+- Checkpoint压缩与增量保存模块：仅保存差异或压缩权重。
+- 生命周期管理策略：自动将旧Checkpoint移至冷存储。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **全量Checkpoint** vs **增量Checkpoint**：全量可靠但占用大；增量节省空间但恢复复杂。
+- **压缩算法**：如Zstd用于通用压缩，或基于量化的Checkpoint压缩。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 恢复速度 vs 存储成本：压缩和增量保存降低存储但增加恢复时间。
+- 存储层级复杂度 vs 管理成本：多层存储优化好但运维复杂。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用Zstd压缩全量Checkpoint + 7天热存储 + 30天温对象存储 + 归档，平衡恢复时间与成本。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **Checkpoint**：训练过程中保存的模型状态，用于故障恢复或后续训练。
+- **数据湖 (Data Lake)**：存储结构化与非结构化数据的集中存储仓库。
+
+---
+

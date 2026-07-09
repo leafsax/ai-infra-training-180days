@@ -1,38 +1,32 @@
-# 第167天：第167天：AI Infra系统设计训练题
+### Day 167: 模型服务成本优化：自动扩缩容与请求路由 (Model Serving Cost Optimization)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计成本高效的LLM服务自动扩缩容与请求路由系统。考察核心：HPA（水平扩缩容）、请求排队、多模型路由。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：多模型服务（大模型用于复杂任务，小模型用于简单任务）。
+- **扩缩容响应时间**：< 30秒。
+- **成本优化目标**：闲置GPU资源减少 50%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 请求分类与路由引擎：基于复杂度将请求路由至大/小模型。
+- 自动扩缩容控制器：基于QPS和排队长度动态调整Pod/实例数。
+- 请求队列与降级机制：高负载时排队或返回简化响应。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **基于指标扩缩容 (Metrics-based HPA)** vs **预测性扩缩容 (Predictive Scaling)**：指标扩缩容响应实际负载，预测性基于历史模式提前扩缩，避免延迟。
+- **统一路由** vs **专用路由**：统一路由简化架构但可能路由不准；专用路由按模型隔离，成本高。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 响应延迟 vs 成本优化：快速扩缩容需要预留资源，增加成本；预测性扩缩容优化成本但可能误判。
+- 路由准确性 vs 系统复杂度：复杂路由规则提升准确性但增加维护成本。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用请求复杂度分类路由 + 基于排队长度的预测性HPA，平衡延迟与成本。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **HPA (Horizontal Pod Autoscaler)**：水平Pod扩缩容，Kubernetes中基于指标自动调整副本数的机制。
+- **Predictive Scaling**：预测性扩缩容，基于历史负载模式提前调整资源。
+
+---
+

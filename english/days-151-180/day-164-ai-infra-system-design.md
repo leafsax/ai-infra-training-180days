@@ -1,38 +1,35 @@
-# Day 164: Day 164: AI Infra System Design Topic 164
+### Day 164: Bias Detection and Fairness Monitoring Infrastructure
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Bias Detection and Fairness Monitoring Infrastructure.
+- Core Examination Areas: Measuring model bias across demographic groups, continuous fairness monitoring, and mitigation strategies.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Monitoring Frequency**: Fairness metrics computed and alerted on for all high-risk model inferences daily.
+- **Fairness Metric**: Disparate impact ratio or equalized odds difference must be within 0.9 to 1.1 across protected groups.
+- **QPS**: 10,000 QPS for a hiring recommendation LLM.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Fairness Evaluation Pipeline**: Batch process that evaluates model outputs on a representative dataset segmented by demographic attributes.
+- **Real-Time Monitoring**: Anonymized inference metadata (not raw PII) used to detect drift in fairness metrics over time.
+- **Alerting System**: Notifications to ML ops and compliance teams if fairness metrics fall outside acceptable thresholds.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Pre-processing Mitigation*: Adjust training data to balance representation across groups.
+- *Solution B: In-processing Mitigation*: Add fairness constraints to the model's loss function during training.
+- *Solution C: Post-processing Mitigation*: Adjust model outputs or thresholds to ensure fair outcomes across groups.
+- *Comparative Analysis*: Pre-processing requires retraining data. In-processing is complex to implement with LLMs. Post-processing is easiest to deploy in inference pipelines but may reduce overall accuracy.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Accuracy vs. Fairness**: Enforcing fairness constraints often reduces overall model accuracy or utility. The trade-off must be calibrated based on legal and ethical requirements.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- For production LLMs where retraining is costly, combine in-processing (if feasible during fine-tuning) with post-processing monitoring and threshold adjustment. Use pre-processing for foundational model training.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Disparate Impact Ratio**: A measure used to determine if a selection process has a significantly different outcome for members of a protected class.
+- **Equalized Odds**: A fairness criterion requiring that the true positive rate and false positive rate are equal across different groups.
+- **Drift**: Data drift or concept drift refers to the change in the statistical properties of the input data or the relationship between inputs and outputs over time.
+
+---
+

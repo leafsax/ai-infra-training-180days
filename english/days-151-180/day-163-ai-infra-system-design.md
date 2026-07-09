@@ -1,38 +1,32 @@
-# Day 163: Day 163: AI Infra System Design Topic 163
+### Day 163: Model Cards, Documentation, and Audit Trails
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Model Cards, Documentation, and Audit Trails.
+- Core Examination Areas: Standardized model documentation, performance metrics disclosure, limitation statements, and immutable audit logs.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Model Card Coverage**: 100% of production models must have a Model Card with training data sources, intended use, and known limitations.
+- **Audit Trail Metric**: All model version changes, training runs, and major inference configuration changes must be logged with user ID and timestamp.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Model Registry with Card Support**: Stores models alongside their documentation (MD or JSON format).
+- **Immutable Audit Ledger**: Uses append-only logs or blockchain-style hashing to ensure audit trails cannot be tampered with.
+- **Documentation Generator**: CI/CD tool that extracts metadata (framework, version, metrics) to auto-generate parts of the Model Card.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Markdown/JSON Model Cards*: Human-readable and machine-parsable documentation stored with the model.
+- *Solution B: Dedicated Model Governance Platform*: Centralized SaaS or on-prem platform for model documentation, approval workflows, and audit trails.
+- *Comparative Analysis*: Markdown/JSON is lightweight and integrates with Git. Governance platforms offer workflow enforcement and compliance reporting but add cost and vendor lock-in.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Flexibility vs. Enforcement**: Git-based Model Cards are flexible and free but rely on developer discipline. Governance platforms enforce compliance but are complex to set up and maintain.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- For small to mid-sized teams, Git-based Model Cards with CI/CD validation are sufficient. For enterprise compliance (SOC 2, EU AI Act), a dedicated Model Governance Platform is recommended.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Model Card**: A documentation template for machine learning models, similar to a nutrition label, providing details about model training, evaluation, and use.
+- **CI/CD**: Continuous Integration / Continuous Deployment – practices and tools for frequently delivering software changes to production.
+
+---
+

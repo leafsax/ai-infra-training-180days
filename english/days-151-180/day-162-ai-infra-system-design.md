@@ -1,38 +1,33 @@
-# Day 162: Day 162: AI Infra System Design Topic 162
+### Day 162: EU AI Act Compliance Infrastructure Requirements
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: EU AI Act Compliance Infrastructure Requirements.
+- Core Examination Areas: Risk categorization of AI systems, transparency requirements, high-risk AI system auditing, and conformity assessment.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Risk Category**: Identify if the AI system is "High Risk" (e.g., hiring, credit scoring) or "Limited Risk" (e.g., chatbots).
+- **Transparency Metric**: 100% of user interactions with limited-risk generative AI must be marked as AI-generated.
+- **Audit Log Retention**: High-risk AI systems must retain inference logs and model version metadata for at least 5 years.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Risk Classification Module**: Metadata tag applied to models at registration, dictating compliance checks.
+- **Watermarking & Disclosure Layer**: Ensures AI-generated content is labeled.
+- **Conformity Assessment Logging**: Immutable logs capturing model version, input/output samples (anonymized), and decision rationales for high-risk systems.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Explicit Risk Tagging in Model Registry*: Each model has a compliance status field updated by legal/compliance teams.
+- *Solution B: Automated Risk Assessment via Metadata Analysis*: ML model that analyzes model capabilities and use cases to suggest a risk category.
+- *Comparative Analysis*: Explicit tagging is legally defensible but requires manual process. Automated assessment is scalable but may require regulatory approval of the assessment logic itself.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Legal Defensibility vs. Automation**: Manual risk tagging provides clear audit trails for regulators. Automated assessment is efficient but introduces uncertainty about the validity of the classification.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- Use explicit risk tagging in the model registry for high-risk systems to ensure legal defensibility. Use automated metadata analysis as a assistive tool for compliance teams to review and confirm classifications.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **EU AI Act**: The European Union's regulatory framework for artificial intelligence, categorizing AI systems by risk level.
+- **High-Risk AI**: AI systems that pose significant risks to health, safety, or fundamental rights (e.g., critical infrastructure, education, employment).
+
+---
+

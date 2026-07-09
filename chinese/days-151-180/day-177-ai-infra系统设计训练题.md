@@ -1,38 +1,33 @@
-# 第177天：第177天：AI Infra系统设计训练题
+### Day 177: 神经形态计算与脉冲神经网络 (Neuromorphic Computing & Spiking Neural Networks)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计支持神经形态计算和SNN（脉冲神经网络）的基础设施。考察核心：事件驱动计算、硬件支持、能效优势。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：低功耗传感器持续事件流分析（如事件相机）。
+- **能效目标**：mW级功耗运行实时推理。
+- **延迟**：事件到推理延迟 < 1ms。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 事件流处理管道：接收事件相机或传感器异步事件流。
+- SNN推理引擎：支持脉冲激活函数的神经网络推理。
+- 神经形态硬件接口：如Intel Loihi或IBM TrueNorth集成。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **SNN (Spiking Neural Networks)** vs **传统ANN**：SNN事件驱动、能效高但训练算法复杂（如STDP）；ANN成熟但功耗高。
+- **专用神经形态芯片** vs **GPU模拟**：专用芯片能效极高但生态少；GPU模拟灵活但失去能效优势。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 能效 vs 算法成熟度：SNN能效好但训练工具链不成熟；ANN生态完善但功耗高。
+- 硬件专用性 vs 通用性：神经形态芯片高效但仅支持特定模型。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+事件相机场景采用专用神经形态芯片（如Loihi）部署SNN，若需快速原型则先用GPU模拟SNN。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **SNN (Spiking Neural Networks)**：脉冲神经网络，模拟生物神经元脉冲通信的AI模型。
+- **神经形态计算 (Neuromorphic Computing)**：模仿大脑神经结构和事件驱动特性的计算范式。
+- **STDP (Spike-Timing-Dependent Plasticity)**：脉冲时序依赖可塑性，SNN的一种学习规则。
+
+---
+

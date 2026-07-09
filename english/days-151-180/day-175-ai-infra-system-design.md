@@ -1,38 +1,34 @@
-# Day 175: Day 175: AI Infra System Design Topic 175
+### Day 175: Storage Cost Optimization for Large-Scale Datasets and Checkpoints
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Storage Cost Optimization for Large-Scale Datasets and Checkpoints.
+- Core Examination Areas: Tiered storage strategies, checkpoint compression, and lifecycle management for training data and model weights.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Storage Cost Reduction Target**: 40% reduction in storage costs for training datasets and checkpoints.
+- **Access Latency**: Hot checkpoints (last 5 versions) must be accessible in < 1 second. Cold checkpoints (older than 30 days) can have retrieval latency of < 5 minutes.
+- **Dataset Size**: 50TB of training data and 5TB of model checkpoints.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Tiered Storage Architecture**: Hot data on high-performance storage (NVMe, GP3), warm data on standard object storage, cold data on archive storage (e.g., S3 Glacier).
+- **Checkpoint Compression**: Store checkpoints in compressed formats (e.g., safetensors with compression, or tar.gz) to reduce storage footprint.
+- **Lifecycle Policies**: Automated rules to move data between tiers based on age or access frequency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Object Storage Lifecycle Management*: Native cloud features to transition data between storage classes.
+- *Solution B: Deduplication and Compression at Checkpoint Save Time*: Reduce the size of saved model weights before writing to storage.
+- *Comparative Analysis*: Lifecycle management is easy to configure and maintains data accessibility. Checkpoint compression reduces storage costs immediately but adds CPU overhead during save and load operations.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Compute Overhead vs. Storage Savings**: Compression saves storage costs but increases CPU usage and latency during checkpoint save/load. Lifecycle management has minimal compute overhead but requires careful tiering policies to avoid access latency issues.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- Use a combination: apply compression to checkpoints to reduce initial storage size, and use object storage lifecycle policies to automatically move older checkpoints to archive tiers. Keep the latest 3-5 checkpoints on fast storage for rapid resume.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **NVMe**: Non-Volatile Memory express – a high-speed standard for accessing solid-state drives.
+- **S3 Glacier**: Amazon S3 Glacier – an object storage service designed for long-term data archiving and backup with lower costs but longer retrieval times.
+- **safetensors**: A simple, safe way to store tensors, designed to avoid arbitrary code execution risks associated with other formats like pickle.
+
+---
+

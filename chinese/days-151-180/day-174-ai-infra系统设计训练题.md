@@ -1,38 +1,31 @@
-# 第174天：第174天：AI Infra系统设计训练题
+### Day 174: 多模态规模化：视频与3D模型推理基础设施 (Multimodal at Scale: Video & 3D Inference)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计支持大规模视频与3D模型推理的AI基础设施。考察核心：多模态数据吞吐、GPU显存优化、流式推理。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：视频内容理解服务（如视频摘要、目标检测）。
+- **视频吞吐**：100 小时视频/小时处理。
+- **延迟指标**：实时视频推理延迟 < 100ms（每帧）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 视频流处理管道：视频解码、帧提取、批量推理。
+- 多模态推理引擎：支持图像、视频、3D输入的模型服务。
+- 显存优化模块：帧级KV Cache或特征缓存。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **逐帧推理** vs **片段级推理 (Segment-based)**：逐帧精度高但计算量大；片段级降低频率但可能丢失细节。
+- **GPU批量处理** vs **专用视频解码硬件**：GPU通用但解码效率低；专用硬件（如NVIDIA NVENC/NVDEC）高效但灵活性差。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 精度 vs 延迟：逐帧推理精度高但延迟大；片段级延迟低但精度下降。
+- 通用GPU vs 专用硬件：通用GPU灵活但成本高，专用硬件高效但锁定供应商。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用片段级推理 + GPU批量处理 + NVDEC硬件解码，平衡吞吐量与延迟。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **多模态 (Multimodal)**：处理多种数据模态（文本、图像、视频、音频）的AI系统。
+
+---
+

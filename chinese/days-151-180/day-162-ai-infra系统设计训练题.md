@@ -1,38 +1,35 @@
-# 第162天：第162天：AI Infra系统设计训练题
+### Day 162: 模型量化与剪枝 (Model Quantization & Pruning)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+通过模型压缩技术降低AI推理成本。考察核心：量化（Quantization）、剪枝（Pruning）、成本-精度权衡。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：将70B参数模型部署到成本受限的推理集群。
+- **显存优化目标**：模型显存占用从 140GB (FP16) 降至 ≤ 40GB。
+- **准确率下降**：≤ 2%。
+- **延迟指标**：TP99 < 300ms，吞吐量提升 ≥ 2x。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 模型转换管道：FP16 -> INT8/INT4 量化或剪枝。
+- 量化感知训练 (QAT) 或后训练量化 (PTQ) 模块。
+- 推理引擎适配：支持INT4/INT8的推理引擎（如vLLM, TensorRT-LLM）。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **PTQ (Post-Training Quantization)** vs **QAT (Quantization-Aware Training)**：PTQ快速但精度损失大；QAT训练阶段模拟量化，精度保留好但需重新训练或微调。
+- **权重量化** vs **激活量化**：权重量化容易实现（静态）；激活量化动态范围大，需 per-tensor 或 per-token 量化策略。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 压缩率 vs 精度：更高压缩率（如INT4）导致更大精度下降。
+- 训练成本 vs 部署成本：QAT增加训练成本，但降低部署显存和延迟成本。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用PTQ + per-channel INT8量化 + vLLM引擎，若精度下降>2%，则采用QAT微调，平衡成本与精度。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **Quantization (量化)**：将模型权重/激活从高精度（FP16/FP32）转换为低精度（INT8/INT4）的技术。
+- **Pruning (剪枝)**：移除模型中不重要的权重或神经元，减少模型大小。
+- **PTQ (Post-Training Quantization)**：后训练量化，训练完成后直接量化模型。
+- **QAT (Quantization-Aware Training)**：量化感知训练，在训练过程中模拟量化误差以保留精度。
+
+---
+

@@ -1,38 +1,33 @@
-# 第156天：第156天：AI Infra系统设计训练题
+### Day 156: AI合规框架 (AI Compliance Frameworks - EU AI Act, etc.)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计满足全球AI合规要求的AI基础设施架构。考察核心：EU AI Act、US Executive Order、中国AI法规的合规技术实现。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：跨国企业AI服务，需满足EU AI Act高风险AI系统要求。
+- **合规审计频率**：季度审计，日志保留 ≥ 3年。
+- **数据 residency**：欧盟用户数据必须存储在欧盟境内。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 数据地理分布模块：基于用户地域的数据路由与存储隔离。
+- 合规审计日志模块：记录模型决策、数据使用、访问控制。
+- 风险分类引擎：自动对AI应用进行风险等级分类（如高风险、有限风险）。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **数据本地化 (Data Localization)** vs **跨境数据传输加密**：数据本地化满足严格合规但增加基础设施成本；跨境加密传输需满足标准合同条款（SCC）。
+- **自动风险分类** vs **人工审核**：自动分类效率高但可能误判；人工审核准确但成本高。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 合规成本 vs 市场覆盖：满足所有地区合规需多地部署，增加成本；单一区域部署可能限制市场。
+- 自动化 vs 人工干预：自动化合规检查快但缺乏灵活性。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用区域数据中心隔离（EU、US、CN）+ 自动化风险分类引擎 + 季度合规审计日志导出，满足EU AI Act高风险系统要求。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **EU AI Act**：欧盟人工智能法案，全球首个综合性AI法规，按风险等级监管AI系统。
+- **Data Residency**：数据 residency，要求数据存储在特定地理区域。
+- **SCC (Standard Contractual Clauses)**：标准合同条款，用于跨境数据传输的合规法律框架。
+
+---
+

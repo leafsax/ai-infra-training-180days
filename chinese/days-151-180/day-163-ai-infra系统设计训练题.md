@@ -1,38 +1,35 @@
-# 第163天：第163天：AI Infra系统设计训练题
+### Day 163: 混合精度与KV Cache优化 (Mixed Precision & KV Cache Optimization)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+优化LLM推理显存与吞吐量。考察核心：混合精度训练/推理、KV Cache管理、PagedAttention。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：高并发LLM服务，需最大化吞吐量同时控制显存。
+- **QPS**：10,000 QPS。
+- **显存优化目标**：KV Cache显存占用减少 50%。
+- **吞吐量提升**：TPS 提升 ≥ 30%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 混合精度推理引擎：FP16/BF16权重 + INT8激活。
+- KV Cache管理器：基于PagedAttention的显存块分配。
+- 动态批处理引擎：Continuous Batching支持。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **Static Batching** vs **Continuous Batching**：Static Batching等待一批请求完整才开始，吞吐低；Continuous Batching（如vLLM）在请求生成不同步时动态合并，提升吞吐。
+- **PagedAttention** vs **传统KV Cache**：PagedAttention将KV Cache分块，支持非连续显存分配，减少碎片，提升显存利用率。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 精度 vs 显存：混合精度降低显存但可能影响长尾准确率。
+- 批处理灵活性 vs 调度复杂度：Continuous Batching提升吞吐但调度逻辑复杂。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用BF16权重 + INT8激活混合精度 + vLLM的PagedAttention + Continuous Batching，实现显存减少50%且吞吐提升30%+。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **KV Cache**：在自回归模型推理中缓存的Key和Value张量，用于加速后续token生成。
+- **PagedAttention**：受操作系统虚拟内存分页启发的注意力机制实现，将KV Cache分块管理。
+- **Static Batching**：静态批处理，等待一批请求全部到达后再一起推理。
+- **Continuous Batching**：连续批处理，动态将新请求和正在生成的请求合并批处理。
+
+---
+

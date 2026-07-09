@@ -1,38 +1,37 @@
-# 第152天：第152天：AI Infra系统设计训练题
+### Day 152: 数据隐私 - 联邦学习与差分隐私 (Federated Learning & Differential Privacy)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计支持跨机构AI训练的隐私保护基础设施。考察核心：联邦学习架构、差分隐私机制、安全聚合。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：多家银行联合训练反欺诈模型，数据不出本地。
+- **QPS**：训练聚合请求 QPS < 100（离线/定时聚合）。
+- **延迟指标**：一轮联邦学习聚合延迟 < 2小时。
+- **隐私预算 (Epsilon)**：ε ≤ 1.0，保证强差分隐私。
+- **显存大小 (HBM)**：本地模型训练显存占用 ≤ 80GB (per GPU, e.g., H100)。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 本地训练节点：各机构本地训练模型并上传梯度。
+- 安全聚合服务器 (Secure Aggregator)：使用同态加密或安全多方计算（MPC）聚合梯度。
+- 差分隐私注入模块：在梯度中添加噪声。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **联邦平均算法 (FedAvg)** vs **安全聚合**：FedAvg效率高但存在梯度泄露风险；安全聚合（如PySyft的加密聚合）隐私强但通信开销增加3-5倍。
+- **差分隐私 (DP)**：在梯度中加入高斯噪声，但会降低模型准确率1%-3%。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 隐私保护强度 vs 模型准确率：更强的差分隐私（更小的ε）导致更多噪声，准确率下降。
+- 通信开销 vs 安全性：同态加密提供强安全但通信和计算开销巨大。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+在金融场景下，选择FedAvg + 局部差分隐私（Local DP）+ 安全聚合的混合架构，ε设定在0.5-1.0之间，平衡隐私与准确率。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **联邦学习 (Federated Learning, FL)**：多节点协同训练模型而不共享原始数据的分布式学习范式。
+- **差分隐私 (Differential Privacy, DP)**：通过添加噪声确保单个数据点对模型输出的影响可忽略的隐私保护技术。
+- **Epsilon (ε)**：差分隐私的隐私预算，值越小隐私保护越强。
+- **同态加密 (Homomorphic Encryption, HE)**：允许在加密数据上直接进行计算的加密技术。
+- **安全多方计算 (Secure Multi-Party Computation, MPC)**：多方在不泄露各自输入的情况下共同计算函数结果的技术。
+
+---
+

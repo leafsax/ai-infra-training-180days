@@ -1,38 +1,32 @@
-# 第178天：第178天：AI Infra系统设计训练题
+### Day 178: AI驱动的基础设施与自治计算 (AI-Driven Infrastructure & Autonomic Computing)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计由AI驱动的基础设施自治管理系统。考察核心：AIOps、自治扩缩容、故障预测与自愈。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：AI平台自管理，减少人工运维。
+- **故障预测准确率**：> 90%（提前30分钟预测）。
+- **自愈时间**：< 5分钟（自动恢复常见故障）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 监控与数据采集层：收集指标、日志、追踪数据。
+- AI故障预测引擎：基于时序模型预测资源耗尽或硬件故障。
+- 自治执行引擎：自动执行扩缩容、重启、路由切换。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **规则-based自愈** vs **AI驱动自愈**：规则-based确定但覆盖有限；AI驱动可处理未知模式但需训练数据且可能有误操作风险。
+- **预测性维护** vs **反应性维护**：预测性减少 downtime，反应性简单但影响业务。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 自动化程度 vs 控制力：完全自治减少人工但降低人工干预能力。
+- 预测准确率 vs 误报成本：高准确率减少误报但可能漏报。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用AI预测 + 规则验证 + 自动执行（带人工审批阈值），平衡自治与风险控制。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **AIOps (AI for IT Operations)**：利用AI技术进行IT运维管理和自动化。
+- **自治计算 (Autonomic Computing)**：系统能够自我管理、自愈、优化的计算范式。
+
+---
+

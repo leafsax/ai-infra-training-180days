@@ -1,38 +1,33 @@
-# 第157天：第157天：AI Infra系统设计训练题
+### Day 157: 数据治理与AI训练版权 (Data Governance & Copyright in AI Training)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计合规的AI训练数据治理与版权防护基础设施。考察核心：数据溯源、版权过滤、数据集许可管理。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：训练通用大模型，需确保训练数据无版权争议。
+- **数据处理吞吐量**：每日处理 10TB 原始数据。
+- **版权过滤准确率**：> 99%，误杀率 < 1%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 数据爬取与许可验证模块：验证数据来源和许可协议（如CC-License）。
+- 版权内容过滤引擎：基于指纹匹配和语义相似度的去重与过滤。
+- 数据溯源日志系统：记录每份训练数据的来源、处理步骤、许可状态。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **URL指纹匹配** vs **语义去重 (MinHash/LSH)**：URL指纹快但无法处理内容改写；语义去重准确但计算开销大（需GPU集群）。
+- **Opt-out机制集成** vs **主动许可验证**：Opt-out依赖创作者主动声明，主动许可验证（如爬虫时检查robots.txt和许可协议）更合规但实现复杂。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 过滤准确率 vs 计算成本：高准确率去重需要大规模分布式计算。
+- 合规严格度 vs 数据规模：严格过滤会减少训练数据量，可能影响模型能力。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用URL指纹 + MinHash语义去重双阶段过滤，结合自动robots.txt和许可协议解析，确保99%以上合规率。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **MinHash**：最小哈希算法，用于高效估计集合相似度。
+- **LSH (Locality-Sensitive Hashing)**：局部敏感哈希，用于快速相似性搜索。
+- **CC-License (Creative Commons License)**：知识共享许可协议，规定内容的使用、修改和分发条件。
+
+---
+

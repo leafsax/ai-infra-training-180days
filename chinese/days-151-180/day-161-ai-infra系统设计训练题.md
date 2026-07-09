@@ -1,38 +1,33 @@
-# 第161天：第161天：AI Infra系统设计训练题
+### Day 161: AI FinOps概述 (AI FinOps Introduction)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计AI基础设施的FinOps（财务运营）成本监控与优化框架。考察核心：成本分配、监控指标、优化策略。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：企业AI平台，需监控和优化GPU集群成本。
+- **成本监控粒度**：按项目、团队、模型实例细分。
+- **成本预警阈值**：月度GPU成本超预算10%时触发告警。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 成本采集代理：收集GPU、CPU、存储、网络使用量。
+- 成本分配引擎：将成本按项目/团队/模型分配（Chargeback/Showback）。
+- 成本优化推荐引擎：基于使用模式推荐实例类型或缩容策略。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **Chargeback** vs **Showback**：Chargeback向团队实际收费，促进行为改变；Showback仅展示成本，不强制收费，文化接受度高但优化动力弱。
+- **实时成本监控** vs **批量账单分析**：实时监控支持即时缩容，批量分析成本低且适合长期趋势。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 监控粒度 vs 系统开销：细粒度监控增加计量系统开销。
+- 即时优化 vs 长期策略：即时缩容避免浪费但可能影响突发业务；长期策略基于预测更稳定但响应慢。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用Showback + 实时成本监控 + 自动化推荐（不自动执行），平衡文化接受度与优化动力。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **FinOps (Financial Operations)**：云财务运营，优化云支出并实现业务价值的实践。
+- **Chargeback**：成本回拨，将IT成本实际分配并收费给使用部门。
+- **Showback**：成本展示，向部门展示其IT成本但不实际收费。
+
+---
+

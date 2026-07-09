@@ -1,38 +1,34 @@
-# 第154天：第154天：AI Infra系统设计训练题
+### Day 154: 模型盗用防护与水印技术 (Model Theft Protection & Watermarking)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计具备模型水印和防盗用能力的AI模型服务。考察核心：模型水印嵌入、提取验证、API防爬取。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：商业大模型API服务，需防止模型权重被盗或API被恶意爬取。
+- **QPS**：10,000 QPS。
+- **延迟指标**：TP99 < 150ms（水印验证开销需 < 10ms）。
+- **水印鲁棒性**：模型微调或量化后水印提取成功率 > 95%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 模型水印嵌入模块：在训练后期或推理时嵌入隐蔽水印。
+- API访问控制与速率限制模块：防止批量查询盗用模型行为。
+- 水印提取与验证服务：接收可疑模型或输出，验证水印存在。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **触发器水印 (Trigger-based Watermarking)** vs **后门水印 (Backdoor Watermarking)**：触发器水印在输入中加入特定pattern，模型输出特定结果；后门水印修改模型内部权重。触发器水印更易提取但可能被数据清洗移除。
+- **API限流 (Rate Limiting)** vs **请求签名 (Request Signing)**：限流防止批量查询，签名防止API密钥泄露后的滥用。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 水印隐蔽性 vs 鲁棒性：高隐蔽性水印易被模型微调破坏；高鲁棒性水印可能影响模型原始准确率。
+- 限流严格度 vs 用户体验：过严的限流会误伤正常高并发用户。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用触发器水印（针对模型权重盗用）+ 动态API限流与IP信誉系统（针对API爬取），水印嵌入在模型最后一层线性投影中，微调后鲁棒性>95%。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **模型水印 (Model Watermarking)**：在模型权重或输出中嵌入隐蔽标识，用于证明模型所有权。
+- **触发器水印 (Trigger-based Watermarking)**：通过特定输入触发模式来验证模型是否被篡改或盗用。
+- **Rate Limiting**：速率限制，控制单位时间内请求数量，防止滥用。
+
+---
+

@@ -1,38 +1,34 @@
-# 第160天：第160天：AI Infra系统设计训练题
+### Day 160: 合规感知的AI基础设施设计 (Compliance-Aware AI Infrastructure Design)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计内建合规能力的AI基础设施平台。考察核心：合规策略引擎、数据生命周期管理、审计自动化。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：企业级AI平台，需支持多法规合规（GDPR, CCPA, AI Act）。
+- **合规策略检查延迟**：< 10ms per request。
+- **审计报表生成时间**：< 1小时（针对月度报告）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 合规策略引擎：基于规则的合规检查（数据归属、保留期限、访问控制）。
+- 数据生命周期管理模块：自动数据脱敏、加密、过期删除。
+- 自动化审计报表生成器：聚合日志并生成合规报告。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **策略即代码 (Policy as Code)** vs **GUI策略配置**：策略即代码（如OPA - Open Policy Agent）易于版本控制和自动化测试；GUI配置易上手但难以审计和版本管理。
+- **实时合规检查** vs **批量审计**：实时检查保证每请求合规但增加延迟；批量审计延迟低但可能发现滞后违规。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 实时合规 vs 性能：实时策略检查增加网关延迟。
+- 自动化 vs 人工审核：完全自动化可能遗漏复杂合规情境，需人工审核介入。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用OPA策略即代码 + 实时轻量级合规检查（数据归属和访问控制）+ 批量深度审计（内容合规），平衡性能与合规覆盖。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **GDPR (General Data Protection Regulation)**：欧盟通用数据保护条例。
+- **CCPA (California Consumer Privacy Act)**：加州消费者隐私法案。
+- **OPA (Open Policy Agent)**：开源策略引擎，用于统一策略控制。
+- **Policy as Code**：将合规策略编写为代码，实现版本控制和自动化执行。
+
+---
+

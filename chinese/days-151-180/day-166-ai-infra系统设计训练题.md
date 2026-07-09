@@ -1,38 +1,33 @@
-# 第166天：第166天：AI Infra系统设计训练题
+### Day 166: 竞价实例与容错训练 (Spot Instances & Fault-Tolerant Training)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+利用竞价实例降低计算成本同时保证训练容错。考察核心：Spot实例管理、检查点恢复、容错调度。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：大规模预训练，使用Spot实例降低成本。
+- **成本节约目标**：计算成本降低 60%-70%。
+- **容错恢复时间**：< 5分钟（对于中断恢复）。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 实例池管理：混合使用On-Demand和Spot实例。
+- 容错训练框架：如PyTorch Elastic或DeepSpeed Fault Tolerance。
+- 异步Checkpoint机制：定期保存至高速存储。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **同步Checkpoint** vs **异步Checkpoint**：同步保证一致性但阻塞训练；异步非阻塞但恢复时可能丢失少量进度。
+- **预测性迁移** vs **中断后恢复**：预测性迁移在实例即将回收前迁移任务，避免中断但复杂；中断后恢复简单但损失进度。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 成本节约 vs 训练稳定性：高Spot比例降低成本但增加中断风险。
+- 恢复速度 vs 存储开销：频繁Checkpoint增加存储和IO开销。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用80% Spot + 20% On-Demand实例 + 异步Checkpoint（每10分钟）+ PyTorch Elastic，实现60%成本节约且恢复<5分钟。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **Spot Instances (竞价实例)**：云服务商提供的折扣实例，可随时被回收。
+- **On-Demand Instances**：按小时/秒计费的常规云实例，不会被突然回收。
+- **PyTorch Elastic**：支持容错和动态缩放的PyTorch训练库。
+
+---
+

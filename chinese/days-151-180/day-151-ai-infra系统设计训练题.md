@@ -1,42 +1,38 @@
-# 第151天：第151天：AI Infra系统设计训练题
+### Day 151: 模型安全 - 对抗攻击与防御 (Adversarial Attacks & Defenses)
 
-## 1) 题目与考察核心
-**题目**：设计一个高吞吐、低延迟的通用大语言模型（LLM）推理服务系统，支持多租户并发请求。
-**考察核心**：推理服务架构、请求调度机制、批处理技术（Batching）、预填充（Prefill）与解码（Decode）阶段的优化。
+**1) 题目与考察核心**
+设计一个抗对抗样本攻击的AI模型推理服务架构。考察核心：对抗样本攻击原理、防御机制、安全推理管道设计。
 
-## 2) 需求澄清与指标定义
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+**2) 需求澄清与指标定义**
+- **业务场景**：金融风控图像识别服务，需防御对抗样本注入。
+- **QPS**：5,000 QPS。
+- **延迟指标**：TTFT（Time to First Token）< 50ms，TP99延迟 < 200ms。
+- **吞吐量**：图像处理TPS（Transactions Per Second）需达到 5,000 TPS。
+- **准确率要求**：在干净数据上准确率 > 99%，在对抗攻击下准确率下降不超过 5%。
 
-## 3) 核心架构/技术组件设计
-- API Gateway & 请求队列
-- 调度器（Scheduler）
-- 推理引擎（Inference Engine）
-- 模型权重存储
+**3) 核心架构/技术组件设计**
+- 输入预处理模块：图像去噪、分辨率标准化。
+- 对抗检测模块：基于统计异常检测（如L2范数检测）的过滤器。
+- 模型推理引擎：部署防御型模型（如对抗训练后的模型）。
+- 审计与告警模块：记录可疑输入并触发告警。
 
-## 4) 关键技术深入与可能解
-- **Static Batching（静态批处理）**
-- **Continuous Batching（连续批处理/In-flight Batching）**
+**4) 关键技术深入与可能解**
+- **静态检测 vs 动态防御**：静态检测（如L2/Norm检查）计算开销小但易被高级攻击绕过；动态防御（如随机化推理、输入变换）鲁棒性高但增加延迟。
+- **对抗训练 (Adversarial Training)**：在训练阶段加入对抗样本，提升模型鲁棒性，但训练成本增加30%-50%。
 
-## 5) Trade-off（权衡）分析
-- Batch Size 增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+**5) Trade-off（权衡）分析**
+- 安全性 vs 延迟：增加检测模块会引入额外延迟（约20-50ms）。
+- 准确率 vs 计算开销：对抗训练提升鲁棒性，但模型体积和推理时间增加。
 
-## 6) 如何确定最优解
-Continuous Batching + 动态 KV Cache 管理
+**6) 如何确定最优解**
+结合业务风险容忍度：若金融场景对误判零容忍，优先选择对抗训练+动态输入变换；若对延迟敏感，采用轻量级L2范数检测+模型蒸馏压缩。
 
-## 7) 名词和缩写解释
-- **LLM**: Large Language Model，大语言模型
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99%的请求延迟小于该值
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: 静态批处理
-- **Continuous Batching**: 连续批处理
-- **Prefill**: 处理输入Prompt阶段
-- **Decode**: 逐Token生成输出阶段
+**7) 名词和缩写解释**
+- **TTFT (Time to First Token)**：首个输出token的生成时间，衡量响应延迟。
+- **TP99**：99%的请求延迟小于该值，用于衡量长尾延迟。
+- **TPS (Transactions Per Second)**：每秒事务处理数。
+- **L2 Norm**：欧几里得范数，用于衡量向量距离，常用于检测对抗样本的异常扰动。
+- **Adversarial Training**：对抗训练，通过在训练数据中加入对抗样本提升模型鲁棒性。
+
+---
+

@@ -1,38 +1,37 @@
-# Day 174: Day 174: AI Infra System Design Topic 174
+### Day 174: Efficient Inference: KV Cache Optimization and PagedAttention
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Efficient Inference: KV Cache Optimization and PagedAttention.
+- Core Examination Areas: Managing memory during LLM inference, optimizing token generation throughput, and reducing memory fragmentation.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput (TPS)**: Increase token generation throughput by 50% through KV cache optimization.
+- **Memory Size (HBM)**: Optimize 80GB HBM usage to support larger batch sizes without OOM (Out of Memory) errors.
+- **QPS**: 15,000 QPS with sustained TP99 latency < 2 seconds.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **KV Cache Manager**: Component that stores Key and Value states for each token in the context.
+- **PagedAttention Implementation**: Inspired by virtual memory paging, divides KV cache into blocks and manages them dynamically.
+- **Continuous Batching Engine**: Allows new requests to be batched with ongoing generations, maximizing GPU utilization.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Static Batching*: Groups requests at the start and processes them to completion together.
+- *Solution B: Continuous Batching (In-flight Batching)*: Dynamically adds new requests and removes completed ones within the batch.
+- *Solution C: PagedAttention*: Manages KV cache memory using paginated blocks, eliminating fragmentation.
+- *Comparative Analysis*: Static batching is simple but wastes compute on completed sequences. Continuous batching maximizes throughput but is complex to implement. PagedAttention solves the memory fragmentation issue that limits continuous batching efficiency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Complexity vs. Throughput**: Continuous batching with PagedAttention offers the highest throughput and memory efficiency but requires a specialized inference engine (e.g., vLLM). Static batching is easier to implement but leaves significant performance on the table.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- For production LLM inference services targeting high QPS and TPS, use an inference engine that supports Continuous Batching and PagedAttention (like vLLM or TensorRT-LLM).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **KV Cache**: Key-Value Cache – the cache of past keys and values in the attention mechanism of an LLM, used to avoid recomputing previous tokens.
+- **PagedAttention**: An attention algorithm inspired by virtual memory paging in operating systems, used to efficiently manage KV cache memory.
+- **Static Batching**: A batching strategy where a fixed batch of requests is processed together from start to finish.
+- **Continuous Batching**: Also known as in-flight batching, a strategy that dynamically adds new requests and removes finished ones to maximize GPU utilization.
+- **OOM**: Out of Memory – an error occurring when a program attempts to allocate more memory than is available.
+
+---
+

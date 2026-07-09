@@ -1,38 +1,37 @@
-# Day 156: Day 156: AI Infra System Design Topic 156
+### Day 156: Zero Trust Architecture for AI/ML Platforms
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Topic: Zero Trust Architecture (ZTA) for AI/ML Platforms.
+- Core Examination Areas: "Never trust, always verify" principles, micro-segmentation, identity and access management (IAM) for AI services.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- **Users/Services**: 500 internal developers, 10,000 API consumers.
+- **Authentication Metric**: 100% of API and internal access requires multi-factor authentication (MFA) or service-to-service mTLS.
+- **Latency Impact**: ZTA authentication overhead should add < 5ms per request.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- **Identity Provider (IdP)**: Centralized IAM system issuing short-lived tokens.
+- **Service Mesh**: Enforces mTLS (mutual TLS) between all microservices (gateway, sanitizer, model server).
+- **Policy Enforcement Points (PEPs)**: Gateways that validate every request against zero trust policies.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: mTLS (Mutual TLS)*: Both client and server authenticate each other using certificates.
+- *Solution B: JWT-based Token Validation*: JSON Web Tokens with short expiration and strict scope validation.
+- *Comparative Analysis*: mTLS provides strong machine-to-machine authentication but requires certificate management. JWT is easier to implement but relies on secure token distribution and validation infrastructure.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off Analysis**
+- **Security vs. Complexity**: mTLS offers superior security for service-to-service communication but increases operational complexity (certificate rotation, key management). JWT is simpler but can be vulnerable if tokens are stolen.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to Determine the Optimal Solution**
+- Use a hybrid approach: mTLS for internal microservice communication (model server to sanitizer) and JWT/OAuth2 for external API consumers, with strict rate limiting and scope validation.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **ZTA**: Zero Trust Architecture – a security model that requires strict identity verification for every person and device trying to access resources.
+- **IAM**: Identity and Access Management – frameworks and systems for managing digital identities and their access.
+- **MFA**: Multi-Factor Authentication – an security system requiring more than one method of authentication.
+- **mTLS**: Mutual Transport Layer Security – a method for securing network communications where both client and server authenticate each other.
+- **JWT**: JSON Web Token – a compact, URL-safe means of representing claims to be transferred between two parties.
+- **PEP**: Policy Enforcement Point – a component that enforces access control decisions.
+
+---
+

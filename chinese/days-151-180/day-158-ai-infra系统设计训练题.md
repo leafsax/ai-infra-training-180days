@@ -1,38 +1,34 @@
-# 第158天：第158天：AI Infra系统设计训练题
+### Day 158: 模型治理与偏见/公平性评估 (Model Governance & Bias/Fairness)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计AI模型偏见检测与公平性评估基础设施。考察核心：偏见度量、公平性测试集、模型治理流程。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：招聘AI筛选服务，需确保无性别、种族偏见。
+- **评估覆盖率**：覆盖 ≥ 50 个敏感属性维度。
+- **公平性指标**：不同群体间的准确率差异 < 2%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 偏见测试集生成模块：构造涵盖敏感属性的评估数据集。
+- 公平性度量引擎：计算不同群体的性能差异（如 demographic parity, equalized odds）。
+- 模型治理仪表盘：可视化模型偏见指标和审计历史。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **Demographic Parity** vs **Equalized Odds**：Demographic Parity要求不同群体预测正例的比例相同；Equalized Odds要求不同群体的真正例率和假正例率相同。后者更严格但更难满足。
+- **预处理去偏见** vs **后处理校准**：预处理修改训练数据，后处理调整模型输出。预处理可能损失信息，后处理易于部署但依赖输出分布。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 公平性 vs 整体准确率：强制公平性约束可能降低整体模型准确率。
+- 度量维度数量 vs 评估成本：更多敏感维度增加评估计算和时间成本。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用Equalized Odds度量 + 后处理校准（如阈值调整），在招聘场景中将群体准确率差异控制在2%以内。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **Demographic Parity**：人口统计平等，要求模型对不同群体的正预测率相同。
+- **Equalized Odds**：等化机会，要求模型对不同群体的真正例率和假正例率相同。
+- **预处理去偏见 (Pre-processing Debiasing)**：在训练数据阶段消除偏见。
+- **后处理校准 (Post-processing Calibration)**：在模型输出阶段调整预测以改善公平性。
+
+---
+

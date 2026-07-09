@@ -1,38 +1,32 @@
-# 第168天：第168天：AI Infra系统设计训练题
+### Day 168: 多租户成本分摊与Chargeback模型 (Multi-Tenant Cost Allocation & Chargeback)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计多租户AI平台的成本分摊与计费系统。考察核心：成本分配算法、租户隔离、计费报表。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：企业内部AI平台，多个团队共享GPU集群。
+- **成本分配粒度**：按租户、模型、训练/推理任务细分。
+- **计费周期**：月度Chargeback报表。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- 资源计量代理：收集各租户GPU、存储、网络使用。
+- 成本分配引擎：按使用量比例或预分配配额分配成本。
+- 计费与报表系统：生成Chargeback/Showback报表。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **按使用量分摊** vs **按配额分摊**：按使用量公平但可能引发资源争抢；按配额稳定但可能导致资源闲置。
+- **实时计量** vs **批量计量**：实时计量准确但系统复杂，批量计量简单但有延迟。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 公平性 vs 管理复杂度：细粒度按使用量分摊公平但计量复杂。
+- 实时性 vs 成本：实时计量系统开发和维护成本高。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用按使用量实时计量 + 月度Chargeback报表，结合配额预警防止超支。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **多租户 (Multi-Tenant)**：单个基础设施服务多个独立客户或团队。
+- **Chargeback模型**：将成本实际分配并收费给内部使用部门。
+
+---
+

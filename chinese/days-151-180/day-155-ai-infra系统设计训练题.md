@@ -1,38 +1,34 @@
-# 第155天：第155天：AI Infra系统设计训练题
+### Day 155: LLM服务API安全与限流 (API Security & Rate Limiting for LLM Services)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**
+设计高可用、防滥用的LLM API服务网关。考察核心：API认证、限流策略、请求过滤与注入攻击防御。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**
+- **业务场景**：公开LLM API服务，需防御Prompt Injection和滥用。
+- **QPS**：峰值 50,000 QPS。
+- **延迟指标**：网关处理延迟 < 5ms，TP99 < 20ms。
+- **限流阈值**：每用户/每分钟 100 请求，突发允许 20%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**
+- API网关：认证、鉴权、限流、路由。
+- 输入过滤模块：检测恶意Prompt、注入攻击模式。
+- 审计日志系统：记录所有请求与响应用于安全审计。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**
+- **令牌桶算法 (Token Bucket)** vs **漏桶算法 (Leaky Bucket)**：令牌桶允许突发流量，适合LLM API；漏桶平滑流量，适合严格排队场景。
+- **正则过滤** vs **LLM-based 内容审核**：正则过滤快但误报率高；LLM-based审核准确但增加延迟（+50ms）。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**
+- 安全性 vs 延迟：深入的Prompt注入检测增加网关延迟。
+- 限流严格度 vs 业务增长：过严限流限制正常用户，过松导致资源被滥用。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**
+采用令牌桶限流 + 轻量级正则+关键字过滤网关，对高风险请求异步交由LLM-based审核，平衡安全与延迟。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写解释**
+- **Prompt Injection**：提示词注入，攻击者通过构造特殊输入诱导模型执行非预期操作。
+- **Token Bucket Algorithm**：令牌桶算法，允许一定突发流量的限流算法。
+- **Leaky Bucket Algorithm**：漏桶算法，平滑请求速率的限流算法。
+
+---
+
