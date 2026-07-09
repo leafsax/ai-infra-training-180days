@@ -36,3 +36,26 @@ For a 100B model trained on 1024 cards, the optimal solution is **3D parallel (D
 - **ZeRO (Zero Redundancy Optimizer)**: A memory optimization technology proposed by Microsoft's DeepSpeed, which eliminates redundancy of optimizers, gradients, and parameters through sharding.
 - **TFLOPs (Tera Floating-point Operations Per Second)**: Tera floating-point operations per second, measuring AI chip computing power.
 - **NVLink**: A high-bandwidth GPU interconnection technology provided by NVIDIA.
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram**:
+  ```mermaid
+  graph TD
+      A[Client/User] --> B[API Gateway / Load Balancer]
+      B --> C[vLLM/TGI Inference Engine]
+      C --> D[GPU Cluster H100/A100]
+      C --> E[Model Weights Storage NVMe/S3]
+      C --> F[KV Cache Manager]
+      D --> G[GPU Monitoring DCGM]
+  ```
+
+- **Data Flow Diagram**:
+  ```mermaid
+  flowchart LR
+      A[User Prompt] --> B[API Gateway]
+      B --> C[Request Queue & Batching]
+      C --> D[GPU Inference Compute]
+      D --> E[Token Generation]
+      E --> F[Response Stream]
+  ```

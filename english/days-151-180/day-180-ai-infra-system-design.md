@@ -32,3 +32,25 @@
 - **QPU**: Quantum Processing Unit – the quantum analog of a classical processing unit, used to perform quantum computations.
 - **Crypto-Agility**: The ability of a system to quickly adapt to new cryptographic algorithms or key sizes without significant architectural changes.
 - **Kyber and Dilithium**: NIST-selected post-quantum cryptographic algorithms (Kyber for key encapsulation, Dilithium for digital signatures).
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Security & Compliance)**:
+  ```mermaid
+  graph TD
+      A[Client Request] --> B[API Gateway TLS/Auth]
+      B --> C[Data Sanitization PII Redaction]
+      C --> D[Secure Model Inference]
+      D --> E[Audit & Compliance Logging]
+      D --> F[FinOps Cost Tracking]
+  ```
+
+- **Data Flow Diagram (Secure Inference)**:
+  ```mermaid
+  flowchart LR
+      A[User Input] --> B[Encryption & Auth]
+      B --> C[PII Detection & Redaction]
+      C --> D[Model Inference Engine]
+      D --> E[Output Validation]
+      E --> F[Logged Audit & Metrics]
+  ```

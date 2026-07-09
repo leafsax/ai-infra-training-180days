@@ -30,3 +30,24 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Checkpointing)**:
+  ```mermaid
+  graph TD
+      A[Training Cluster GPUs] --> B[Checkpoint Manager]
+      B --> C[Shared Storage S3/NFS/Ceph]
+      A --> D[Model Registry MLflow/W&B]
+      A --> E[Gradient Sync RDMA/NCCL]
+  ```
+
+- **Data Flow Diagram (Checkpoint Flow)**:
+  ```mermaid
+  flowchart LR
+      A[Training Step Compute] --> B[State Snapshot Weights/Optimizer]
+      B --> C[Async Checkpoint Writer]
+      C --> D[Durable Storage]
+      D --> E[Model Registry Update]
+  ```

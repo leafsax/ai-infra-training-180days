@@ -36,3 +36,25 @@
 - **HBM (High Bandwidth Memory)**：高带宽内存，GPU常用显存类型。
 
 ---
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 高级推理服务）**：
+  ```mermaid
+  graph TD
+      A[负载均衡器] --> B[推理 Pods vLLM]
+      B --> C[PagedAttention KV Cache]
+      B --> D[GPU资源管理器]
+      D --> E[Kubernetes / Karpenter]
+      B --> F[遥测 DCGM/OpenTelemetry]
+  ```
+
+- **数据流图（Data Flow Diagram - 连续批处理）**：
+  ```mermaid
+  flowchart LR
+      A[ incoming 请求] --> B[连续批处理调度器]
+      B --> C[KV Cache 查找与更新]
+      C --> D[GPU Tensor Core 计算]
+      D --> E[输出 Tokens]
+      E --> F[流式响应]
+  ```

@@ -26,3 +26,25 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 自动扩缩容）**：
+  ```mermaid
+  graph TD
+      A[API网关] --> B[推理服务 vLLM]
+      B --> C[自定义指标服务器]
+      C --> D[KEDA 扩缩容器]
+      D --> E[Kubernetes 集群]
+      E --> B
+  ```
+
+- **数据流图（Data Flow Diagram - 扩缩容数据流）**：
+  ```mermaid
+  flowchart LR
+      A[请求负载] --> B[指标导出器]
+      B --> C[Prometheus / DCGM]
+      C --> D[KEDA 操作器]
+      D --> E[扩容/缩容 Pods]
+  ```

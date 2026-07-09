@@ -37,3 +37,25 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Network Architecture)**:
+  ```mermaid
+  graph TD
+      A[Job Scheduler Slurm/K8s] --> B[Compute Nodes GPU+CPU]
+      B --> C[RDMA Network InfiniBand/RoCE]
+      B --> D[Distributed Storage Lustre/GPFS]
+      C --> E[All-Reduce Communication NCCL]
+  ```
+
+- **Data Flow Diagram (Training Data & Compute)**:
+  ```mermaid
+  flowchart LR
+      A[Data Loader] --> B[Local NVMe Cache]
+      B --> C[GPU Compute Kernel]
+      C --> D[NCCL All-Reduce via RDMA]
+      D --> C
+      C --> E[Gradient Update]
+  ```

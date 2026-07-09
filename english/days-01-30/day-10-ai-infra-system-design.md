@@ -29,3 +29,27 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram**:
+  ```mermaid
+  graph TD
+      A[Client/User] --> B[API Gateway / Load Balancer]
+      B --> C[vLLM/TGI Inference Engine]
+      C --> D[GPU Cluster H100/A100]
+      C --> E[Model Weights Storage NVMe/S3]
+      C --> F[KV Cache Manager]
+      D --> G[GPU Monitoring DCGM]
+  ```
+
+- **Data Flow Diagram**:
+  ```mermaid
+  flowchart LR
+      A[User Prompt] --> B[API Gateway]
+      B --> C[Request Queue & Batching]
+      C --> D[GPU Inference Compute]
+      D --> E[Token Generation]
+      E --> F[Response Stream]
+  ```

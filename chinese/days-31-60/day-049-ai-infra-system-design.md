@@ -25,3 +25,24 @@
 - **模型蒸馏（Model Distillation）**：用大模型（教师）指导小模型（学生）训练以提升后者性能的技术。
 
 ---
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - GPU集群管理）**：
+  ```mermaid
+  graph TD
+      A[集群控制器] --> B[GPU节点 H100]
+      B --> C[MIG / vGPU 分区器]
+      B --> D[RDMA 网络交换机]
+      A --> E[自动扩缩容 KEDA]
+      E --> B
+  ```
+
+- **数据流图（Data Flow Diagram - 扩缩容流程）**：
+  ```mermaid
+  flowchart LR
+      A[流量突增] --> B[指标收集器 DCGM]
+      B --> C[Scaler 控制器]
+      C --> D[ Provision 新GPU Pods]
+      D --> E[路由流量到新Pods]
+  ```

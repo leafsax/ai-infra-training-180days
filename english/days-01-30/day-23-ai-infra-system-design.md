@@ -28,3 +28,25 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Distributed Training)**:
+  ```mermaid
+  graph TD
+      A[Data Loader] --> B[Training Nodes GPU+CPU]
+      B --> C[NCCL All-Reduce Network]
+      B --> D[Checkpoint Storage S3/NFS]
+      B --> E[Model Registry MLflow]
+      C --> B
+  ```
+
+- **Data Flow Diagram (Training)**:
+  ```mermaid
+  flowchart LR
+      A[Training Data] --> B[Gradient Compute per GPU]
+      B --> C[NCCL Gradient Sync]
+      C --> D[Weight Update]
+      D --> E[Checkpoint Save]
+  ```

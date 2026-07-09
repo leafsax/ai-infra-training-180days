@@ -29,3 +29,24 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 多模态训练）**：
+  ```mermaid
+  graph TD
+      A[多模态输入 图像/文本/音频] --> B[预处理管道]
+      B --> C[训练计算 GPUs]
+      C --> D[跨模态注意力层]
+      C --> E[检查点与模型注册表]
+  ```
+
+- **数据流图（Data Flow Diagram - 多模态流程）**：
+  ```mermaid
+  flowchart LR
+      A[原始多模态数据] --> B[Tokenization与编码]
+      B --> C[模型前向传播]
+      C --> D[损失计算]
+      D --> E[反向传播与梯度同步]
+  ```

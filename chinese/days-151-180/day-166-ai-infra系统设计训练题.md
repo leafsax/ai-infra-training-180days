@@ -31,3 +31,24 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 成本优化与未来趋势）**：
+  ```mermaid
+  graph TD
+      A[训练/推理工作负载] --> B[FinOps 仪表盘]
+      B --> C[Spot实例管理器]
+      B --> D[模型压缩引擎 量化]
+      B --> E[Agentic AI 编排层]
+  ```
+
+- **数据流图（Data Flow Diagram - FinOps流程）**：
+  ```mermaid
+  flowchart LR
+      A[计算使用指标] --> B[成本遥测层]
+      B --> C[按项目成本分配]
+      C --> D[优化建议]
+      D --> E[自动扩缩容/压缩]
+  ```

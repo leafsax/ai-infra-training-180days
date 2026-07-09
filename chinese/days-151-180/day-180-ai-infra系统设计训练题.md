@@ -37,3 +37,25 @@
 - Each day includes the 7 required sections: 题目与考察核心, 需求澄清与指标定义, 核心架构/技术组件设计, 关键技术深入与可能解, Trade-off分析, 如何确定最优解, and 名词与缩写解释。
 - Topics covered: AI Infrastructure Security (Days 151-155), Compliance & Governance (Days 156-160), Cost Optimization / FinOps (Days 161-170), and Future Trends (Days 171-180).
 - No external files were created; the content is provided directly in this response as formatted Markdown.
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 安全与合规）**：
+  ```mermaid
+  graph TD
+      A[客户端请求] --> B[API网关 TLS/认证]
+      B --> C[数据清洗 PII脱敏]
+      C --> D[安全模型推理]
+      D --> E[审计与合规日志]
+      D --> F[FinOps成本追踪]
+  ```
+
+- **数据流图（Data Flow Diagram - 安全推理）**：
+  ```mermaid
+  flowchart LR
+      A[用户输入] --> B[加密与认证]
+      B --> C[PII检测与脱敏]
+      C --> D[模型推理引擎]
+      D --> E[输出验证]
+      E --> F[记录审计与指标]
+  ```

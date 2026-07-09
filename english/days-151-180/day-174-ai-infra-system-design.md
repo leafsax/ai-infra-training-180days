@@ -35,3 +35,24 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Cost Optimization & Future Trends)**:
+  ```mermaid
+  graph TD
+      A[Training/Inference Workloads] --> B[FinOps Dashboard]
+      B --> C[Spot Instance Manager]
+      B --> D[Model Compression Engine Quantization]
+      B --> E[Agentic AI Orchestration Layer]
+  ```
+
+- **Data Flow Diagram (FinOps Flow)**:
+  ```mermaid
+  flowchart LR
+      A[Compute Usage Metrics] --> B[Cost Telemetry Layer]
+      B --> C[Cost Allocation by Project]
+      C --> D[Optimization Recommendations]
+      D --> E[Automated Scaling/Compression]
+  ```

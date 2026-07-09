@@ -31,3 +31,26 @@
 - **Bubble (空泡)**：流水线中GPU等待上游或下游数据而产生的空闲时间。
 
 ---
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 推理服务）**：
+  ```mermaid
+  graph TD
+      A[客户端/用户] --> B[API网关 / 负载均衡器]
+      B --> C[vLLM/TGI 推理引擎]
+      C --> D[GPU集群 H100/A100]
+      C --> E[模型权重存储 NVMe/S3]
+      C --> F[KV Cache 管理器]
+      D --> G[GPU监控 DCGM]
+  ```
+
+- **数据流图（Data Flow Diagram - 推理流程）**：
+  ```mermaid
+  flowchart LR
+      A[用户提示词] --> B[API网关]
+      B --> C[请求队列与批处理]
+      C --> D[GPU推理计算]
+      D --> E[Token生成]
+      E --> F[响应流式输出]
+  ```

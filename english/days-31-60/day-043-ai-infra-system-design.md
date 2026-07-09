@@ -32,3 +32,26 @@ For interactive applications requiring low latency and high throughput, speculat
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram**:
+  ```mermaid
+  graph TD
+      A[Load Balancer] --> B[Inference Pods vLLM]
+      B --> C[PagedAttention KV Cache]
+      B --> D[GPU Resource Manager]
+      D --> E[Kubernetes / Karpenter]
+      B --> F[Telemetry DCGM/OpenTelemetry]
+  ```
+
+- **Data Flow Diagram**:
+  ```mermaid
+  flowchart LR
+      A[Incoming Requests] --> B[Continuous Batching Scheduler]
+      B --> C[KV Cache Lookup & Update]
+      C --> D[GPU Tensor Core Compute]
+      D --> E[Output Tokens]
+      E --> F[Streaming Response]
+  ```

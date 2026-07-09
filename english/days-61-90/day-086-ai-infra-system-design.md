@@ -35,3 +35,25 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Auto-Scaling)**:
+  ```mermaid
+  graph TD
+      A[API Gateway] --> B[Inference Service vLLM]
+      B --> C[Custom Metrics Server]
+      C --> D[KEDA Scaler]
+      D --> E[Kubernetes Cluster]
+      E --> B
+  ```
+
+- **Data Flow Diagram (Auto-Scaling Flow)**:
+  ```mermaid
+  flowchart LR
+      A[Request Load] --> B[Metrics Exporter]
+      B --> C[Prometheus / DCGM]
+      C --> D[KEDA Operator]
+      D --> E[Scale In/Out Pods]
+  ```

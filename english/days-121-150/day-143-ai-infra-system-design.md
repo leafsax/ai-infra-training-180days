@@ -32,3 +32,25 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Task Scheduling)**:
+  ```mermaid
+  graph TD
+      A[User Job Submission] --> B[Scheduler K8s/Slurm]
+      B --> C[Gang Scheduling Controller]
+      C --> D[Resource Affinity Checker]
+      D --> E[GPU Node Allocation]
+      E --> F[Job Execution]
+  ```
+
+- **Data Flow Diagram (Scheduling Flow)**:
+  ```mermaid
+  flowchart LR
+      A[Job Request] --> B[Queue & Priority Sort]
+      B --> C[Resource Availability Check]
+      C --> D[Allocate Gang of Pods]
+      D --> E[Start Training Job]
+  ```

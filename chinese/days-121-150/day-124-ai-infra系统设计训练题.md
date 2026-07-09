@@ -30,3 +30,25 @@ LLM训练必须采用支持NVSwitch的GPU服务器（如NVIDIA DGX H100），并
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 网络架构）**：
+  ```mermaid
+  graph TD
+      A[作业调度器 Slurm/K8s] --> B[计算节点 GPU+CPU]
+      B --> C[RDMA网络 InfiniBand/RoCE]
+      B --> D[分布式存储 Lustre/GPFS]
+      C --> E[All-Reduce通信 NCCL]
+  ```
+
+- **数据流图（Data Flow Diagram - 训练数据与计算）**：
+  ```mermaid
+  flowchart LR
+      A[数据加载器] --> B[本地 NVMe 缓存]
+      B --> C[GPU计算内核]
+      C --> D[NCCL All-Reduce via RDMA]
+      D --> C
+      C --> E[梯度更新]
+  ```

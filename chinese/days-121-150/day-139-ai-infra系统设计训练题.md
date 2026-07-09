@@ -26,3 +26,25 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 任务调度）**：
+  ```mermaid
+  graph TD
+      A[用户作业提交] --> B[调度器 K8s/Slurm]
+      B --> C[Gang 调度控制器]
+      C --> D[资源亲和性检查器]
+      D --> E[GPU节点分配]
+      E --> F[作业执行]
+  ```
+
+- **数据流图（Data Flow Diagram - 调度流程）**：
+  ```mermaid
+  flowchart LR
+      A[作业请求] --> B[队列与优先级排序]
+      B --> C[资源可用性检查]
+      C --> D[分配 Gang Pods]
+      D --> E[启动训练作业]
+  ```

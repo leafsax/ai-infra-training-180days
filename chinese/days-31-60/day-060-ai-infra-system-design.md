@@ -34,3 +34,25 @@
 --- 
 
 **总结**：以上为Days 31-60“高级推理服务与GPU集群管理”主题的AI Infra System Design Training Question Set完整内容，按天列出并包含题目与考察核心、需求澄清与指标定义、核心架构/技术组件设计、关键技术深入与可能解、Trade-off分析、如何确定最优解，以及所有出现的名词和缩写的全称及解释。
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 高级推理服务）**：
+  ```mermaid
+  graph TD
+      A[负载均衡器] --> B[推理 Pods vLLM]
+      B --> C[PagedAttention KV Cache]
+      B --> D[GPU资源管理器]
+      D --> E[Kubernetes / Karpenter]
+      B --> F[遥测 DCGM/OpenTelemetry]
+  ```
+
+- **数据流图（Data Flow Diagram - 连续批处理）**：
+  ```mermaid
+  flowchart LR
+      A[ incoming 请求] --> B[连续批处理调度器]
+      B --> C[KV Cache 查找与更新]
+      C --> D[GPU Tensor Core 计算]
+      D --> E[输出 Tokens]
+      E --> F[流式响应]
+  ```

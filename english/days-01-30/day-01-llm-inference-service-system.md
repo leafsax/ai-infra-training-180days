@@ -40,3 +40,26 @@ Determine the optimal Batch Size and scheduling strategy through benchmarking (B
 - **Continuous Batching**: Continuous batching, dynamically adding and removing requests in a Batch.
 - **Prefill**: The stage of processing the input Prompt, calculating and generating the initial KV Cache.
 - **Decode**: The stage of generating output token by token.
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram**:
+  ```mermaid
+  graph TD
+      A[Client/User] --> B[API Gateway / Load Balancer]
+      B --> C[vLLM/TGI Inference Engine]
+      C --> D[GPU Cluster H100/A100]
+      C --> E[Model Weights Storage NVMe/S3]
+      C --> F[KV Cache Manager]
+      D --> G[GPU Monitoring DCGM]
+  ```
+
+- **Data Flow Diagram**:
+  ```mermaid
+  flowchart LR
+      A[User Prompt] --> B[API Gateway]
+      B --> C[Request Queue & Batching]
+      C --> D[GPU Inference Compute]
+      D --> E[Token Generation]
+      E --> F[Response Stream]
+  ```

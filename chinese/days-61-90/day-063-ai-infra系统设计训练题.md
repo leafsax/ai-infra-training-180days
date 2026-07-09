@@ -39,3 +39,24 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 数据管道）**：
+  ```mermaid
+  graph TD
+      A[数据源] --> B[ETL/ELT 管道 Spark/Flink]
+      B --> C[数据湖 S3/Parquet]
+      B --> D[向量数据库 FAISS/Weaviate]
+  ```
+
+- **数据流图（Data Flow Diagram - RAG系统）**：
+  ```mermaid
+  flowchart LR
+      A[用户查询] --> B[RAG 编排器]
+      B --> C[向量数据库检索]
+      C --> D[上下文构造]
+      D --> E[LLM推理]
+      E --> F[最终响应]
+  ```

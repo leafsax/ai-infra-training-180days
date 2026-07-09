@@ -32,3 +32,26 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 安全与合规）**：
+  ```mermaid
+  graph TD
+      A[客户端请求] --> B[API网关 TLS/认证]
+      B --> C[数据清洗 PII脱敏]
+      C --> D[安全模型推理]
+      D --> E[审计与合规日志]
+      D --> F[FinOps成本追踪]
+  ```
+
+- **数据流图（Data Flow Diagram - 安全推理）**：
+  ```mermaid
+  flowchart LR
+      A[用户输入] --> B[加密与认证]
+      B --> C[PII检测与脱敏]
+      C --> D[模型推理引擎]
+      D --> E[输出验证]
+      E --> F[记录审计与指标]
+  ```

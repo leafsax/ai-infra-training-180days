@@ -32,3 +32,26 @@
 
 **总结**：
 以上内容涵盖了AI Infra系统设计的30天详细训练题集，从基础指标与GPU架构，到模型并行（DP/TP/PP）、训练优化（ZeRO, FlashAttention, 量化）、推理服务（Continuous Batching, PagedAttention, 路由与扩缩容），再到MLOps与RAG Infra。每天均包含题目、指标定义、架构设计、技术深入、Trade-off分析、最优解确定及名词解释，可作为AI Infra系统设计面试与工程实践的完整参考。
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 推理服务）**：
+  ```mermaid
+  graph TD
+      A[客户端/用户] --> B[API网关 / 负载均衡器]
+      B --> C[vLLM/TGI 推理引擎]
+      C --> D[GPU集群 H100/A100]
+      C --> E[模型权重存储 NVMe/S3]
+      C --> F[KV Cache 管理器]
+      D --> G[GPU监控 DCGM]
+  ```
+
+- **数据流图（Data Flow Diagram - 推理流程）**：
+  ```mermaid
+  flowchart LR
+      A[用户提示词] --> B[API网关]
+      B --> C[请求队列与批处理]
+      C --> D[GPU推理计算]
+      D --> E[Token生成]
+      E --> F[响应流式输出]
+  ```

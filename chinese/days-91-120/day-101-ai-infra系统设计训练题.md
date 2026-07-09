@@ -33,3 +33,24 @@
 
 ---
 
+
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 检查点机制）**：
+  ```mermaid
+  graph TD
+      A[训练集群 GPUs] --> B[检查点管理器]
+      B --> C[共享存储 S3/NFS/Ceph]
+      A --> D[模型注册表 MLflow/W&B]
+      A --> E[梯度同步 RDMA/NCCL]
+  ```
+
+- **数据流图（Data Flow Diagram - 检查点流程）**：
+  ```mermaid
+  flowchart LR
+      A[训练步计算] --> B[状态快照 权重/优化器]
+      B --> C[异步检查点写入器]
+      C --> D[持久化存储]
+      D --> E[模型注册表更新]
+  ```

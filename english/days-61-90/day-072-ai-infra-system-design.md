@@ -36,3 +36,24 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Data Pipeline)**:
+  ```mermaid
+  graph TD
+      A[Data Sources] --> B[ETL/ELT Pipeline Spark/Flink]
+      B --> C[Data Lake S3/Parquet]
+      B --> D[Vector Database FAISS/Weaviate]
+  ```
+
+- **Data Flow Diagram (RAG System)**:
+  ```mermaid
+  flowchart LR
+      A[User Query] --> B[RAG Orchestrator]
+      B --> C[Vector DB Retrieval]
+      C --> D[Context Construction]
+      D --> E[LLM Inference]
+      E --> F[Final Response]
+  ```

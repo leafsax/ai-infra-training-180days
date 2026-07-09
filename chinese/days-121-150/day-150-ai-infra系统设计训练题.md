@@ -33,3 +33,24 @@
 - **每日结构**：每一天均包含7个部分：题目与考察核心、需求澄清与指标定义、核心架构/技术组件设计、关键技术深入与可能解、Trade-off分析、如何确定最优解、名词和缩写的全称及解释。
 - **涵盖主题**：网络拓扑（Fat-Tree, Dragonfly+）、InfiniBand vs RoCEv2、RDMA/GDR、NVLink/NVSwitch、NCCL、分布式文件系统（Lustre/GPFS/Ceph）、NVMe缓存、数据Pipeline、Slurm vs K8s、Gang Scheduling、Preemption、Affinity、弹性训练、RDMA QP类型、UCX、拥塞控制（PFC/ECN/DCQCN）、Telemetry（P4/eBPF）、Checkpointing（同步/异步、ZeRO-3、FSDP）、分层存储、多租户隔离、容错与慢节点检测、GPU分区（MIG/vGPU）、可观测性与SLO。
 - **文件格式**：全部内容已格式化为Markdown文本并按天列出。
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 网络架构）**：
+  ```mermaid
+  graph TD
+      A[作业调度器 Slurm/K8s] --> B[计算节点 GPU+CPU]
+      B --> C[RDMA网络 InfiniBand/RoCE]
+      B --> D[分布式存储 Lustre/GPFS]
+      C --> E[All-Reduce通信 NCCL]
+  ```
+
+- **数据流图（Data Flow Diagram - 训练数据与计算）**：
+  ```mermaid
+  flowchart LR
+      A[数据加载器] --> B[本地 NVMe 缓存]
+      B --> C[GPU计算内核]
+      C --> D[NCCL All-Reduce via RDMA]
+      D --> C
+      C --> E[梯度更新]
+  ```

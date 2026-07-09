@@ -37,3 +37,24 @@
 - **What I accomplished**: Produced 30 days of structured training content, with each day including: (1) Topic and Core Examination Areas; (2) Requirement Clarification and Metric Definitions; (3) Core Architecture/Technical Component Design; (4) Deep Dive into Key Technologies and Possible Solutions; (5) Trade-off analysis; (6) How to determine the optimal solution; (7) Full names and explanations of all nouns and abbreviations.
 - **Files created or modified**: No external files were created; the complete content is provided in this response as Markdown-formatted text.
 - **Issues encountered**: None. The 30-day content was generated systematically following the exact 7-section structure required for each day.
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Network Architecture)**:
+  ```mermaid
+  graph TD
+      A[Job Scheduler Slurm/K8s] --> B[Compute Nodes GPU+CPU]
+      B --> C[RDMA Network InfiniBand/RoCE]
+      B --> D[Distributed Storage Lustre/GPFS]
+      C --> E[All-Reduce Communication NCCL]
+  ```
+
+- **Data Flow Diagram (Training Data & Compute)**:
+  ```mermaid
+  flowchart LR
+      A[Data Loader] --> B[Local NVMe Cache]
+      B --> C[GPU Compute Kernel]
+      C --> D[NCCL All-Reduce via RDMA]
+      D --> C
+      C --> E[Gradient Update]
+  ```

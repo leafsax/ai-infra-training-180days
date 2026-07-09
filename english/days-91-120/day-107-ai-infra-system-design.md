@@ -32,3 +32,24 @@
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (Multimodal Training)**:
+  ```mermaid
+  graph TD
+      A[Multimodal Inputs Image/Text/Audio] --> B[Preprocessing Pipeline]
+      B --> C[Training Compute GPUs]
+      C --> D[Cross-Modal Attention Layers]
+      C --> E[Checkpoint & Model Registry]
+  ```
+
+- **Data Flow Diagram (Multimodal Flow)**:
+  ```mermaid
+  flowchart LR
+      A[Raw Multimodal Data] --> B[Tokenization & Encoding]
+      B --> C[Model Forward Pass]
+      C --> D[Loss Computation]
+      D --> E[Backward Pass & Gradient Sync]
+  ```

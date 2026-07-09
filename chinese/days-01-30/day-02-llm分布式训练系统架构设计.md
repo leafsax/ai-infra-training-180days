@@ -36,3 +36,26 @@
 - **ZeRO（Zero Redundancy Optimizer）**：微软 DeepSpeed 提出的显存优化技术，通过分片消除优化器、梯度和参数的冗余。
 - **TFLOPs（Tera Floating-point Operations Per Second）**：每秒万亿次浮点运算，衡量 AI 芯片算力。
 - **NVLink**：NVIDIA 提供的高带宽 GPU 间互联技术。
+
+### **8) 组件图与数据流图**
+
+- **组件图（Component Diagram - 推理服务）**：
+  ```mermaid
+  graph TD
+      A[客户端/用户] --> B[API网关 / 负载均衡器]
+      B --> C[vLLM/TGI 推理引擎]
+      C --> D[GPU集群 H100/A100]
+      C --> E[模型权重存储 NVMe/S3]
+      C --> F[KV Cache 管理器]
+      D --> G[GPU监控 DCGM]
+  ```
+
+- **数据流图（Data Flow Diagram - 推理流程）**：
+  ```mermaid
+  flowchart LR
+      A[用户提示词] --> B[API网关]
+      B --> C[请求队列与批处理]
+      C --> D[GPU推理计算]
+      D --> E[Token生成]
+      E --> F[响应流式输出]
+  ```

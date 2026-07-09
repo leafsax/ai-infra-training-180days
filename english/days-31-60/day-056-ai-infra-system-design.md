@@ -30,3 +30,25 @@ For multi-tenant cloud inference or fine-tuning services requiring strict SLAs a
 
 ---
 
+
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram (GPU Cluster Management)**:
+  ```mermaid
+  graph TD
+      A[Cluster Controller] --> B[GPU Nodes H100]
+      B --> C[MIG / vGPU Partitioner]
+      B --> D[RDMA Network Switch]
+      A --> E[Auto-Scaler KEDA]
+      E --> B
+  ```
+
+- **Data Flow Diagram (Scaling)**:
+  ```mermaid
+  flowchart LR
+      A[Traffic Spike] --> B[Metrics Collector DCGM]
+      B --> C[Scaler Controller]
+      C --> D[Provision New GPU Pods]
+      D --> E[Route Traffic to New Pods]
+  ```

@@ -31,3 +31,25 @@ For near-term (1-3 years), chiplet-based GPUs and continued NVLink/NVSwitch evol
 - **UCIe (Universal Chiplet Interconnect Express)**: An open standard for chiplet-to-chiplet interconnects, enabling heterogeneous integration of chiplets from different manufacturers.
 - **Optical Interconnects**: Data transfer technologies that use light (photons) instead of electrical signals, offering higher bandwidth and lower power consumption.
 - **PIM (Processing-in-Memory)**: A computing architecture that performs computations within or adjacent to memory units, reducing the energy and latency associated with moving data between memory and compute.
+
+### **8) Component Diagram & Data Flow Diagram**
+
+- **Component Diagram**:
+  ```mermaid
+  graph TD
+      A[Load Balancer] --> B[Inference Pods vLLM]
+      B --> C[PagedAttention KV Cache]
+      B --> D[GPU Resource Manager]
+      D --> E[Kubernetes / Karpenter]
+      B --> F[Telemetry DCGM/OpenTelemetry]
+  ```
+
+- **Data Flow Diagram**:
+  ```mermaid
+  flowchart LR
+      A[Incoming Requests] --> B[Continuous Batching Scheduler]
+      B --> C[KV Cache Lookup & Update]
+      C --> D[GPU Tensor Core Compute]
+      D --> E[Output Tokens]
+      E --> F[Streaming Response]
+  ```
