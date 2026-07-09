@@ -1,7686 +1,5842 @@
-# AI Infra System Design Training Material - 180 Days (English Version)
-
-This document contains 180 days of AI Infra system design training materials.
+# AI Infra Training 180 Days - English Version
 
-## DAYS-01-30
-
-# Day 1: Day 1: AI Infra System Design Topic 1
-
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
-
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
-
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
-
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
-
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
-
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
-
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
 
-
----
 
-# Day 1: LLM Inference Service System Design
-
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
-
-## 2) Requirement Clarification and Metric Definitions
-- **QPS (Queries Per Second, queries per second)**: Estimated 1000 QPS.
-- **Latency metrics**:
-  - **TTFT (Time To First Token, first token latency)**: TP99 < 200ms.
-  - **Generation latency (Inter-token Latency)**: TP99 < 50ms/token.
-- **Throughput metrics**: **TPS (Tokens Per Second, tokens generated per second)** > 5000 tokens/s.
-- **Memory size**: Model weights loaded into **HBM (High Bandwidth Memory, high-bandwidth memory)**, single card 80GB HBM, supporting maximum context length of 32K.
-
-## 3) Core Architecture/Technical Component Design
-- **API Gateway & Request Queue**: Receive external requests, perform authentication and rate limiting, and place requests into a message queue (such as Kafka or Redis Queue).
-- **Scheduler**: Pull requests from the queue and combine them into a Batch according to the batching strategy.
-- **Inference Engine**: Such as vLLM, TGI (Text Generation Inference), responsible for executing the forward propagation of the model and managing KV Cache.
-- **Model Weight Storage**: Model parameters are stored in the GPU's HBM in FP16/BF16 format.
-
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching (Static Batching)**: When requests arrive, statically combine multiple requests into a Batch for Prefill and Decode. The disadvantage is that if a request generation ends, the Batch must wait for all requests to complete, causing GPU idle time.
-- **Continuous Batching (Continuous Batching/In-flight Batching)**: Dynamically add new requests to a Batch and remove requests that have completed generation. Prefill and Decode phases are processed separately to maximize GPU utilization.
-
-## 5) Trade-off Analysis
-- **Increasing Batch Size**: Improves throughput (TPS), but increases TTFT (because it needs to wait for more requests to gather a Batch) and latency in the Decode phase.
-- **Static vs Continuous Batching**: Static Batching is simple to implement but has low resource utilization; Continuous Batching has high complexity (requires dynamic KV Cache management) but significantly improves throughput.
-
-## 6) How to Determine the Optimal Solution
-Determine the optimal Batch Size and scheduling strategy through benchmarking (Benchmark). For high-concurrency, long-text scenarios, choose **Continuous Batching + dynamic KV Cache management** as the optimal solution.
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM (Large Language Model, large language model)**: A large-scale text generation model based on deep learning.
-- **QPS (Queries Per Second)**: The number of query requests processed per second.
-- **TTFT (Time To First Token)**: The time from sending a request to receiving the first generated Token, reflecting the response speed of the system.
-- **TP99**: 99% of request latencies are less than this value, used to measure system tail latency.
-- **TPS (Tokens Per Second)**: The number of Tokens generated per second, measuring inference throughput.
-- **HBM (High Bandwidth Memory)**: High-bandwidth memory, the high-speed memory type used by GPUs (such as 80GB HBM3 of H100).
-- **Static Batching**: Static batching, which fixes requests into a Batch in advance.
-- **Continuous Batching**: Continuous batching, dynamically adding and removing requests in a Batch.
-- **Prefill**: The stage of processing the input Prompt, calculating and generating the initial KV Cache.
-- **Decode**: The stage of generating output token by token.
-
----
-
-# Day 2: Day 2: AI Infra System Design Topic 2
-
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
-
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
-
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
-
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
-
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+## Day 31: Large Language Model Serving - Introduction to Serving Systems & Static vs Continuous Batching
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 1) Topic and Core Examination Areas
+**Topic**: Introduction to LLM Serving Systems and Batching Strategies.
+**Core Examination Areas**: Understanding the LLM serving pipeline, request lifecycle, and the fundamental differences between Static Batching and Continuous Batching (also known as Inflight Batching or Request-Level Batching).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 2) Requirement Clarification and Metric Definitions
+- **QPS (Queries Per Second)**: Expected ingress rate, e.g., 100 QPS for a mid-sized enterprise LLM API.
+- **TTFT (Time To First Token)**: Latency metric measuring time from request submission to the first generated token. Target: < 500ms for interactive applications.
+- **TP99 Latency**: The latency value below which 99% of all token generation times fall. Target: < 200ms per token for smooth UX.
+- **Throughput (TPS - Tokens Per Second)**: System-wide token generation rate. Target: > 10,000 TPS for a cluster of 8x H100 GPUs.
+- **HBM (High Bandwidth Memory)**: GPU memory type. Example: H100 SXM5 has 80GB HBM3 memory.
 
+### 3) Core Architecture/Technical Component Design
+- **API Gateway**: Handles authentication, rate limiting, and request routing.
+- **Serving Engine**: Manages model loading, request scheduling, and token generation (e.g., vLLM, TGI).
+- **Model Weights Storage**: High-speed storage (NVMe or distributed filesystem) for model checkpoints.
+- **Request Queue**: Buffers incoming requests before they are scheduled for execution.
 
----
-
-# Day 2: LLM Distributed Training System Architecture Design
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Static Batching**: Groups requests into fixed-size batches at the start of generation. All requests in the batch must finish at the same time (dictated by the longest request). Leads to high padding overhead and underutilized GPU compute.
+- **Continuous Batching (Inflight Batching)**: Dynamically adds new requests and removes completed ones at the token level. Maximizes GPU utilization by ensuring the batch size is always at the hardware limit without waiting for stragglers.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
-
-## 2) Requirement Clarification and Metric Definitions
-- **Number of GPUs**: 1024 H100 80GB GPUs.
-- **Training time**: < 30 days to complete pre-training.
-- **Computing efficiency**: **TFLOPs Utilization (Tera Floating-point Operations Per Second utilization)** > 60%.
-- **Model parameters**: 100B (100 billion) parameters, FP16/BF16 precision.
-
-## 3) Core Architecture/Technical Component Design
-- **Data Parallel (DP) node cluster**: Shard the dataset and distribute it to multiple GPUs.
-- **Tensor Parallel (TP) layer**: Shard model weights (such as Attention matrices, MLP matrices) to multiple GPUs.
-- **Pipeline Parallel (PP) stage**: Assign different layers of the model to different GPU groups to form a pipeline.
-- **Optimizer state management**: Use ZeRO technology to reduce redundant storage of optimizers, gradients, and parameters.
-
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel, data parallel)**: Each GPU has a complete copy of the model, processes different data shards, and finally synchronizes gradients.
-- **TP (Tensor Parallel, tensor parallel)**: Slice the multiplication operation of a single large matrix, and multiple GPUs collaborate to complete one forward/backward propagation.
-- **PP (Pipeline Parallel, pipeline parallel)**: Slice model layers in order, and different GPUs simultaneously process data layers of different Batches.
-- **ZeRO (Zero Redundancy Optimizer, zero redundancy optimizer)**: Proposed by DeepSpeed, divided into ZeRO-1 (optimizer state sharding), ZeRO-2 (gradient sharding), ZeRO-3 (full sharding of parameters, gradients, and optimizer states).
-
-## 5) Trade-off Analysis
-- **DP vs TP vs PP**: DP has small communication volume but high memory usage; TP has low memory usage but frequent GPU-to-GPU communication (requires high-speed NVLink); PP reduces memory but has pipeline bubbles (Pipeline Bubble).
-- **Communication overhead of ZeRO-3**: ZeRO-3 significantly saves memory, but requires cross-GPU communication of parameters for each forward/backward propagation, increasing network latency.
+### 5) Trade-off Analysis
+- **Static Batching**: Simpler to implement, lower scheduling overhead, but poor GPU utilization and higher average TTFT due to padding.
+- **Continuous Batching**: Higher GPU throughput, lower average latency, but requires complex state management (tracking request completion, KV cache eviction).
 
-## 6) How to Determine the Optimal Solution
-For a 100B model trained on 1024 cards, the optimal solution is **3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding**. TP degree is set to 8 (utilizing high-speed interconnection of NVLink), PP degree is set to 16, and DP degree is 8.
+### 6) How to Determine the Optimal Solution
+For production LLM serving with variable request lengths and high QPS, Continuous Batching is optimal. For simple, short-prompt batch processing (offline inference), Static Batching may suffice due to its simplicity.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP (Data Parallel, data parallel)**: Multiple GPUs hold the same model and process different data subsets.
-- **TP (Tensor Parallel, tensor parallel)**: Shard model weight matrices and have multiple GPUs compute them together.
-- **PP (Pipeline Parallel, pipeline parallel)**: Assign different layers of the model to different GPUs to form a data pipeline.
-- **ZeRO (Zero Redundancy Optimizer)**: A memory optimization technology proposed by Microsoft's DeepSpeed, which eliminates redundancy of optimizers, gradients, and parameters through sharding.
-- **TFLOPs (Tera Floating-point Operations Per Second)**: Tera floating-point operations per second, measuring AI chip computing power.
-- **NVLink**: A high-bandwidth GPU interconnection technology provided by NVIDIA.
+### 7) Glossary: Full Names and Explanations
+- **LLM (Large Language Model)**: A deep learning model trained on vast text corpora to generate human-like text.
+- **QPS (Queries Per Second)**: A measure of the number of queries or requests a system processes per second.
+- **TTFT (Time To First Token)**: Latency metric measuring the time from when a request is submitted to when the first token of the response is generated.
+- **TP99**: The 99th percentile latency; 99% of requests complete within this time.
+- **TPS (Tokens Per Second)**: The number of tokens generated by the model per second across the entire system.
+- **HBM (High Bandwidth Memory)**: A type of computer memory used in high-performance GPUs, offering much higher bandwidth than standard DDR RAM.
+- **Static Batching**: A batching strategy where requests are grouped into fixed batches at the beginning, and all requests in the batch are processed to completion together.
+- **Continuous Batching (Inflight Batching)**: A dynamic batching strategy that allows new requests to be added and completed requests to be removed at the token level, maximizing GPU utilization.
 
 ---
 
-# Day 3: Day 3: AI Infra System Design Topic 3
-
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
-
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
-
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
-
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
-
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+================================================================================
 
+## Day 32: LLM Serving - KV Cache Management and PagedAttention
 
----
-
-# Day 4: Day 4: AI Infra System Design Topic 4
+### 1) Topic and Core Examination Areas
+**Topic**: KV Cache Management and PagedAttention Mechanism.
+**Core Examination Areas**: Understanding what KV Cache is, why it is a memory bottleneck, and how PagedAttention solves memory fragmentation and overhead issues.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **KV Cache Size**: For a 70B model with 8x H100 (80GB HBM), the KV cache can consume 30-40GB of memory for moderate batch sizes.
+- **Memory Fragmentation**: Wasted memory due to non-contiguous KV cache allocations.
+- **Context Window**: The maximum number of tokens a model can process at once (e.g., 128K tokens).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
-
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **KV Cache Buffer**: A dedicated memory region on the GPU to store Key and Value tensors for each token in the sequence.
+- **Memory Manager**: Allocates and deallocates KV cache blocks dynamically.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
-
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Naive KV Cache Allocation**: Allocates contiguous memory for each sequence. Leads to severe fragmentation and limits batch size.
+- **PagedAttention**: Inspired by virtual memory paging in operating systems. Divides the KV cache into fixed-size blocks. Blocks can be non-contiguous in memory but are mapped logically via a page table. This eliminates fragmentation and allows dynamic sharing of KV cache blocks (e.g., in forked sequences like in batched sampling).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **Naive Allocation**: Simple but wastes memory, limiting throughput.
+- **PagedAttention**: High memory efficiency, supports larger batch sizes and longer context windows, but adds slight overhead for page table lookups.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+For any production LLM serving system supporting long contexts and high concurrency, PagedAttention (or an equivalent block-wise KV cache management system) is mandatory.
 
+### 7) Glossary: Full Names and Explanations
+- **KV Cache (Key-Value Cache)**: In transformer models, the cached Key and Value tensors from previous decoding steps to avoid recomputing them, significantly speeding up inference.
+- **Context Window**: The maximum number of tokens a model can take as input at once.
+- **PagedAttention**: An attention algorithm that uses concepts from virtual memory and paging systems to efficiently manage KV cache memory, eliminating fragmentation and enabling dynamic allocation.
+- **Memory Fragmentation**: A condition where memory is allocated in non-contiguous blocks, leading to wasted space and inability to allocate large contiguous segments.
 
 ---
-
-# Day 5: Day 5: AI Infra System Design Topic 5
-
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+## Day 33: LLM Serving - Model Parallelism: Tensor Parallelism (TP) & Pipeline Parallelism (PP)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 1) Topic and Core Examination Areas
+**Topic**: Model Parallelism Strategies for Serving and Training Large Models.
+**Core Examination Areas**: Tensor Parallelism (TP), Pipeline Parallelism (PP), and how they split model weights and computations across multiple GPUs.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 2) Requirement Clarification and Metric Definitions
+- **Model Size**: e.g., 70B parameters, requiring multiple GPUs even for inference.
+- **GPUs per Node**: Typically 8x H100 GPUs per server node.
+- **TP Degree (Tensor Parallelism size)**: Number of GPUs splitting a single layer's weights (e.g., TP=4).
+- **PP Degree (Pipeline Parallelism size)**: Number of GPUs splitting model layers sequentially (e.g., PP=2).
 
+### 3) Core Architecture/Technical Component Design
+- **Tensor Parallelism Setup**: Splits matrices (e.g., Q, K, V, O matrices in attention) across GPUs. Each GPU computes a portion and then synchronizes via All-Reduce.
+- **Pipeline Parallelism Setup**: Divides the transformer layers into stages. Each stage is assigned to a GPU or group of GPUs.
 
----
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Tensor Parallelism (TP)**: Splits a single layer's computation across multiple GPUs. For attention, QKV projections are split. Requires high-bandwidth interconnect (NVLink) due to frequent All-Reduce operations.
+- **Pipeline Parallelism (PP)**: Splits layers across GPUs. Introduces pipeline bubbles (idle time) between stages. Solutions like GPipe (gradient checkpointing across pipeline) or Interleaved 1F1B (One-Forward-One-Backward) minimize bubbles.
 
-# Day 6: Day 6: AI Infra System Design Topic 6
+### 5) Trade-off Analysis
+- **TP**: High communication overhead within the group, but low latency for single-request inference. Best for fitting large models onto available GPUs.
+- **PP**: Better for scaling to very large models across many GPUs, but introduces pipeline bubbles and increases latency due to stage synchronization.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 6) How to Determine the Optimal Solution
+For inference on models like Llama-3-70B, TP=4 or TP=8 is typically used with PP=1 to minimize latency. For training, a combination of TP, PP, and DP (Data Parallelism) is used to scale across thousands of GPUs.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 7) Glossary: Full Names and Explanations
+- **Model Parallelism**: Techniques for distributing a single model's weights or computations across multiple GPUs.
+- **Tensor Parallelism (TP)**: A model parallelism technique that splits the tensors (matrices) within a layer across multiple GPUs, requiring frequent synchronization via All-Reduce.
+- **Pipeline Parallelism (PP)**: A model parallelism technique that partitions the neural network layers into stages, with each stage assigned to a different GPU, processing different micro-batches through the pipeline.
+- **All-Reduce**: A collective communication operation that computes the sum (or other reduction) of data across all GPUs and distributes the result to all of them.
+- **NVLink**: A high-speed GPU-to-GPU interconnect technology developed by NVIDIA, offering much higher bandwidth than PCIe.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+## Day 34: LLM Serving - Data Parallelism (DP) and Distributed Inference
 
+### 1) Topic and Core Examination Areas
+**Topic**: Data Parallelism for Inference and Distributed Serving Architectures.
+**Core Examination Areas**: How Data Parallelism (DP) applies to inference (Model Parallelism + Data Parallelism), and distributed routing strategies.
 
----
+### 2) Requirement Clarification and Metric Definitions
+- **DP Degree**: Number of replicas of the model across different GPU groups (e.g., DP=2 means 2 full copies of the model on 2x TP=4 groups).
+- **Load Balancer**: Component that routes incoming requests to different model replicas.
+- **QPS per Replica**: Expected query load handled by each model instance.
 
-# Day 7: Day 7: AI Infra System Design Topic 7
+### 3) Core Architecture/Technical Component Design
+- **Model Replicas**: Multiple identical copies of the model, each capable of serving requests independently.
+- **Request Router/Distributor**: Uses strategies like Round-Robin, Least-Connections, or KV-cache-aware routing to distribute requests to replicas.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Naive DP (Model Replication)**: Each replica has a full copy of the model. Simple load balancing (Round-Robin) works well if requests are similar in length.
+- **KV-Aware DP Routing**: Routes requests to the replica with the most available KV cache capacity or similar sequence lengths to optimize batching efficiency.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 5) Trade-off Analysis
+- **Naive DP**: Simple to implement, but may lead to unbalanced KV cache usage and suboptimal batching across replicas.
+- **KV-Aware Routing**: Complex to implement, requires state sharing among replicas, but maximizes overall system throughput.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 6) How to Determine the Optimal Solution
+For high-QPS production systems with variable request lengths, KV-aware routing or sequence-length-aware load balancing is optimal to ensure each DP replica achieves high continuous batching efficiency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 7) Glossary: Full Names and Explanations
+- **Data Parallelism (DP)**: A distributed training/serve technique where full copies of the model are placed on different devices, and each device processes a different subset of the data (or in inference, handles a shard of the request traffic).
+- **Load Balancer**: A system or component that distributes incoming network traffic across multiple servers or model replicas to ensure no single resource is overwhelmed.
+- **KV-Aware Routing**: A load balancing strategy that considers the state of the KV cache across model replicas to make routing decisions that optimize batching and memory usage.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+## Day 35: LLM Training - Distributed Training Frameworks (ZeRO, FSDP)
 
-# Day 8: Day 8: AI Infra System Design Topic 8
+### 1) Topic and Core Examination Areas
+**Topic**: Distributed Training Frameworks and Memory Optimization for LLM Training.
+**Core Examination Areas**: DeepSpeed ZeRO stages, PyTorch FSDP (Fully Sharded Data Parallel), and how they optimize memory for training massive models.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **Model Parameters**: e.g., 70B parameters requiring ~140GB in FP16/BF16.
+- **Optimizer States**: Typically 2x-4x parameter size (e.g., Adam optimizer has momentum and variance states).
+- **Gradients**: Same size as parameters.
+- **Total Training Memory**: Parameters + Optimizer States + Gradients + Activations (can be 5-10x parameter size without optimization).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 3) Core Architecture/Technical Component Design
+- **Data Parallel Trainer**: Maintains full model replicas on each GPU, syncing gradients via All-Reduce.
+- **Sharded Trainer (ZeRO/FSDP)**: Shards model states (parameters, gradients, optimizer states) across data parallel workers.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **DeepSpeed ZeRO (Zero Redundancy Optimizer)**: 
+  - *ZeRO-1*: Shards optimizer states.
+  - *ZeRO-2*: Shards optimizer states and gradients.
+  - *ZeRO-3*: Shards parameters, gradients, and optimizer states across DP workers.
+- **PyTorch FSDP (Fully Sharded Data Parallel)**: PyTorch's native implementation similar to ZeRO-3, allowing fine-grained control over sharding and recomputation (gradient checkpointing).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 5) Trade-off Analysis
+- **Standard DP**: High memory usage, limits model size, but simple communication (only gradients synced).
+- **ZeRO/FSDP**: Drastically reduces per-GPU memory footprint, enabling training of larger models, but increases communication volume (sharded states must be gathered before computation).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 6) How to Determine the Optimal Solution
+For training models that exceed single-GPU or single-node memory capacity, ZeRO-3 or FSDP is required. ZeRO-2 is often a sweet spot for balancing memory and communication overhead.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 7) Glossary: Full Names and Explanations
+- **ZeRO (Zero Redundancy Optimizer)**: A memory optimization technology from DeepSpeed that eliminates redundancy in data parallel training by sharding parameters, gradients, and optimizer states across workers.
+- **ZeRO-1/2/3**: Stages of ZeRO optimization. ZeRO-1 shards optimizer states; ZeRO-2 adds gradient sharding; ZeRO-3 adds parameter sharding.
+- **FSDP (Fully Sharded Data Parallel)**: PyTorch's implementation of sharded data parallelism, similar to ZeRO-3, which shards model states across data parallel workers.
+- **Optimizer States**: Variables maintained by the optimizer (e.g., Adam's momentum and variance estimates) which can be 2x-4x the size of model parameters.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 9: Day 9: AI Infra System Design Topic 9
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+## Day 36: LLM Training - Memory Optimization Techniques (Gradient Checkpointing, ZeRO-1/2/3)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 1) Topic and Core Examination Areas
+**Topic**: Advanced Memory Optimization for LLM Training.
+**Core Examination Areas**: Gradient Checkpointing (Activation Recomputation), memory profiling, and combining ZeRO with checkpointing.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 2) Requirement Clarification and Metric Definitions
+- **Activations**: Intermediate computations stored for backward pass. Can consume 50-80% of training memory for large batch sizes and long context windows.
+- **Batch Size (Micro-batch)**: Number of samples processed before a gradient update.
+- **GPU Memory Usage**: Measured in GB; target is to fit model + states + activations within 80GB HBM.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 3) Core Architecture/Technical Component Design
+- **Forward Pass**: Computes activations and stores them.
+- **Backward Pass**: Uses stored activations to compute gradients. If not stored, activations must be recomputed (checkpointing).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Gradient Checkpointing (Activation Recomputation)**: Instead of storing all activations, only a subset (checkpoints) is stored. During the backward pass, missing activations are recomputed in the forward pass. Trades compute for memory.
+- **Combined ZeRO + Checkpointing**: ZeRO-3 reduces parameter/optimizer memory, while checkpointing reduces activation memory. This combination enables training of 100B+ models on available GPU hardware.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **Full Activation Storage**: Low compute overhead during backward pass, but high memory usage, limiting batch size or model size.
+- **Gradient Checkpointing**: Reduces memory linearly with the checkpointing interval, but increases forward pass compute during backward by 33%-100% depending on strategy.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+Use gradient checkpointing with a tuned interval (e.g., checkpoint every 2-4 layers) to balance memory savings and compute overhead. Combine with ZeRO-3/FSDP for maximum model scaling.
 
+### 7) Glossary: Full Names and Explanations
+- **Gradient Checkpointing (Activation Recomputation)**: A memory optimization technique where intermediate activations are not stored during the forward pass; instead, they are recomputed during the backward pass to save GPU memory.
+- **Activations**: The intermediate output values of neural network layers that must be stored for the backward pass (gradient computation).
+- **Micro-batch**: A subset of the training data processed in a single forward/backward pass before gradients are aggregated and applied.
 
 ---
 
-# Day 10: Day 10: AI Infra System Design Topic 10
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+## Day 37: LLM Training - Communication Optimization (Ring-AllReduce, Overlap Computation-Communication)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 1) Topic and Core Examination Areas
+**Topic**: Communication Optimization in Distributed Training.
+**Core Examination Areas**: All-Reduce algorithms (Ring-AllReduce, Tree-AllReduce), and computation-communication overlap techniques.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 2) Requirement Clarification and Metric Definitions
+- **Network Bandwidth**: e.g., InfiniBand NDR offers 400 Gbps (~50 GB/s) per link.
+- **Gradient Size**: For a 70B model in BF16, gradients are ~140GB. Syncing this via All-Reduce is a major bottleneck.
+- **Compute Bound vs Communication Bound**: Training is compute-bound when GPU utilization is high; communication-bound when GPUs wait for gradient synchronization.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 3) Core Architecture/Technical Component Design
+- **Ring-AllReduce**: A decentralized algorithm where each GPU sends data to its neighbor in a ring, performing partial reductions and exchanging until all GPUs have the full reduced result.
+- **Computation-Communication Overlap**: Schedules gradient computation and All-Reduce operations to happen concurrently using PyTorch's `async_op` or DeepSpeed's overlap features.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Ring-AllReduce vs Tree-AllReduce**: Ring-AllReduce scales linearly with network size and is robust for 8-64 GPUs. Tree-AllReduce can be faster for very large clusters but is more complex to implement and sensitive to network topology.
+- **Gradient Compression**: Techniques like 8-bit All-Reduce or sparsification to reduce the volume of data sent over the network, at the cost of minor precision loss.
 
+### 5) Trade-off Analysis
+- **Ring-AllReduce**: Simple, robust, but limited by the slowest link in the ring.
+- **Gradient Compression**: Reduces network traffic and training time, but may introduce numerical instability or accuracy degradation if over-compressed.
 
----
+### 6) How to Determine the Optimal Solution
+For standard 8-GPU or 64-GPU nodes with NVLink or InfiniBand, Ring-AllReduce with computation-communication overlap is optimal. For extreme scale or limited network bandwidth, consider gradient compression or ZeRO-Infinity (offloading to CPU/NVMe).
 
-# Day 11: Day 11: AI Infra System Design Topic 11
+### 7) Glossary: Full Names and Explanations
+- **Ring-AllReduce**: A distributed communication algorithm where GPUs are arranged in a logical ring, and data is passed and reduced incrementally around the ring until all GPUs have the final result.
+- **Tree-AllReduce**: A communication algorithm that uses a tree structure to aggregate and broadcast data, potentially offering lower latency than Ring-AllReduce for large clusters.
+- **Computation-Communication Overlap**: A technique where gradient computation (backward pass) and gradient synchronization (All-Reduce) are scheduled to occur simultaneously to hide communication latency.
+- **InfiniBand**: A high-performance networking technology commonly used in HPC and AI clusters, offering low latency and high bandwidth (e.g., 400 Gbps NDR).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+## Day 38: High-Performance Computing Networks - InfiniBand vs Ethernet (RoCEv2)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 1) Topic and Core Examination Areas
+**Topic**: HPC Networking for AI Clusters.
+**Core Examination Areas**: InfiniBand vs RoCEv2 (RDMA over Converged Ethernet), network topology, and lossless network configuration.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 2) Requirement Clarification and Metric Definitions
+- **Latency**: Network round-trip time. InfiniBand NDR: ~0.5 microseconds. RoCEv2: ~1-2 microseconds.
+- **Bandwidth**: e.g., 400 Gbps per link for NDR InfiniBand or 400GbE RoCEv2.
+- **PFC (Priority Flow Control)**: A mechanism to prevent packet loss in lossless networks.
+- **ECN (Explicit Congestion Notification)**: A signaling mechanism to manage congestion without dropping packets.
 
+### 3) Core Architecture/Technical Component Design
+- **InfiniBand Switches and Routers**: Dedicated HPC network hardware supporting RDMA (Remote Direct Memory Access) without CPU involvement.
+- **RoCEv2 on Ethernet**: Runs RDMA over UDP/IP on standard Ethernet switches, requiring lossless configuration (PFC, ECN).
 
----
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **InfiniBand**: Proprietary (mostly NVIDIA/Mellanox) network with hardware-level RDMA, low latency, and built-in lossless features. Higher cost.
+- **RoCEv2 (RDMA over Converged Ethernet version 2)**: Open standard running RDMA over Ethernet. Requires careful tuning of PFC and ECN to avoid PFC storms and packet loss. Lower hardware cost.
 
-# Day 12: Day 12: AI Infra System Design Topic 12
+### 5) Trade-off Analysis
+- **InfiniBand**: Best performance, lowest latency, out-of-the-box lossless, but expensive and vendor-locked.
+- **RoCEv2**: Lower cost, uses standard Ethernet infrastructure, but requires significant networking expertise to configure lossless properties and avoid PFC storms.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 6) How to Determine the Optimal Solution
+For maximum performance and simplicity in AI training clusters, InfiniBand is preferred. For cost-sensitive or existing Ethernet-heavy data centers, RoCEv2 with proper congestion control is the optimal alternative.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 7) Glossary: Full Names and Explanations
+- **InfiniBand**: A high-performance networking protocol and interconnect standard used in HPC and AI, supporting RDMA with very low latency and high bandwidth.
+- **RoCEv2 (RDMA over Converged Ethernet version 2)**: A protocol that enables RDMA operations over Ethernet networks using UDP/IP, requiring lossless network configurations.
+- **RDMA (Remote Direct Memory Access)**: A technology that allows data to be transferred between the memory of two computers without involving the CPU or operating system of either computer.
+- **PFC (Priority Flow Control)**: An Ethernet mechanism that temporarily pauses traffic on specific priority levels to prevent buffer overflow and packet loss.
+- **ECN (Explicit Congestion Notification)**: A network feature that signals congestion to endpoints before packet drops occur, allowing senders to reduce transmission rates.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+## Day 39: GPU Interconnects - NVLink, NVSwitch, and GPU-to-GPU Communication
 
+### 1) Topic and Core Examination Areas
+**Topic**: GPU Interconnect Technologies.
+**Core Examination Areas**: NVLink, NVSwitch, PCIe vs NVLink bandwidth, and their impact on model parallelism and distributed training.
 
----
+### 2) Requirement Clarification and Metric Definitions
+- **PCIe Gen5 Bandwidth**: ~32 GB/s per lane (x16 is ~256 GB/s bidirectional).
+- **NVLink Bandwidth**: e.g., H100 NVLink offers 900 GB/s bidirectional per link.
+- **NVSwitch**: A switch fabric that connects multiple GPUs within a node or across nodes at NVLink speeds.
 
-# Day 13: Day 13: AI Infra System Design Topic 13
+### 3) Core Architecture/Technical Component Design
+- **GPU-to-GPU Direct Communication**: NVLink enables direct memory access between GPUs without going through the host CPU or PCIe switch.
+- **Node Architecture**: 8x H100 GPUs connected via NVSwitch to form a full-mesh NVLink fabric, offering 4.5 TB/s aggregate bandwidth.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **PCIe**: General-purpose CPU-to-GPU and GPU-to-GPU (via host) interconnect. Sufficient for Data Parallelism but a bottleneck for Tensor Parallelism.
+- **NVLink + NVSwitch**: Provides a high-bandwidth, low-latency interconnect specifically designed for multi-GPU workloads, enabling efficient Tensor Parallelism and Ring-AllReduce operations.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 5) Trade-off Analysis
+- **PCIe-only**: Lower cost, but bandwidth is insufficient for fine-grained model parallelism (TP>2) at scale.
+- **NVLink/NVSwitch**: Essential for high-performance LLM training/serving, but requires specialized hardware (e.g., HGX nodes) and increases cost.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 6) How to Determine the Optimal Solution
+For any LLM training or large-model inference (TP>=4), NVLink/NVSwitch connectivity (HGX nodes) is mandatory. For smaller models or DP-only inference, PCIe may suffice.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 7) Glossary: Full Names and Explanations
+- **NVLink**: A high-speed GPU-to-GPU interconnect technology developed by NVIDIA, offering bandwidths significantly higher than PCIe (e.g., 900 GB/s per link for H100).
+- **NVSwitch**: A high-bandwidth switch fabric that connects multiple GPUs within a server node or across nodes, enabling full-mesh NVLink connectivity.
+- **PCIe (Peripheral Component Interconnect Express)**: A standard bus interface for connecting hardware devices (like GPUs) to a computer's motherboard and CPU.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+## Day 40: Storage Systems for AI - High-Speed Storage (NVMe, GPUDirect Storage)
 
-# Day 14: Day 14: AI Infra System Design Topic 14
+### 1) Topic and Core Examination Areas
+**Topic**: AI Storage Infrastructure and Data Loading Optimization.
+**Core Examination Areas**: NVMe SSDs, storage throughput for training data, and GPUDirect Storage (GDS).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **Storage Throughput**: e.g., 10-20 GB/s per node for training data loading.
+- **IOPS (Input/Output Operations Per Second)**: Measure of storage device's ability to handle random read/write operations.
+- **Checkpoint Size**: e.g., 70B model checkpoint in BF16 is ~140GB, plus optimizer states can exceed 500GB. Checkpoint I/O must be fast to not bottleneck training.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 3) Core Architecture/Technical Component Design
+- **NVMe SSDs**: High-speed storage devices connected via PCIe, offering 5-7 GB/s read speeds per drive.
+- **Parallel File Systems**: e.g., Lustre, GPFS, or cloud-native object storage (S3) with high-throughput access.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Standard CPU-mediated I/O**: Data moves from storage -> CPU memory -> GPU memory. Introduces latency and CPU overhead.
+- **GPUDirect Storage (GDS)**: Allows NVMe drives to transfer data directly to GPU memory via PCIe, bypassing CPU memory and reducing latency and CPU utilization.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 5) Trade-off Analysis
+- **CPU-mediated I/O**: Simpler to set up, but CPU becomes a bottleneck for data loading at scale.
+- **GPUDirect Storage**: Requires compatible GPUs, NVMe drives, and storage drivers, but significantly improves data loading throughput and reduces training idle time.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 6) How to Determine the Optimal Solution
+For large-scale LLM training with high data throughput requirements, GPUDirect Storage combined with high-speed NVMe or parallel file systems is optimal.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 7) Glossary: Full Names and Explanations
+- **NVMe (Non-Volatile Memory Express)**: A high-speed storage interface protocol designed for flash memory (SSDs) connected via PCIe.
+- **IOPS (Input/Output Operations Per Second)**: A metric that measures the number of read or write operations a storage device can perform per second.
+- **GPUDirect Storage (GDS)**: A technology that enables direct data transfers between storage devices (like NVMe SSDs) and GPU memory, bypassing the host CPU and system RAM.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 15: Day 15: AI Infra System Design Topic 15
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+## Day 41: AI Cluster Networking - Fat-Tree, Dragonfly, and Network Topologies
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 1) Topic and Core Examination Areas
+**Topic**: Network Topologies for AI Clusters.
+**Core Examination Areas**: Fat-Tree, Clos networks, Dragonfly topology, and bisection bandwidth.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 2) Requirement Clarification and Metric Definitions
+- **Bisection Bandwidth**: The minimum bandwidth required to split the network into two equal halves. Critical for All-Reduce performance.
+- **Radix**: The number of ports on a switch.
+- **k-ary n-tree**: A fat-tree topology with k ports per switch and n levels.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 3) Core Architecture/Technical Component Design
+- **Fat-Tree Topology**: A multi-level switch fabric where links towards the core have higher aggregate bandwidth than links at the edge, ensuring no congestion during All-Reduce.
+- **Spine-Leaf Architecture**: Common Ethernet implementation of fat-tree, where leaf switches connect to servers and spine switches connect leaf switches.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Fat-Tree/Clos Networks**: Provide non-blocking communication, essential for distributed training All-Reduce operations. 
+- **Dragonfly Topology**: Used for very large clusters (thousands of nodes), optimizing for fewer switches and longer links, but requires advanced routing algorithms to avoid congestion.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **Fat-Tree**: Excellent performance, non-blocking, but requires many switches and high cabling complexity/cost.
+- **Dragonfly**: Scales to tens of thousands of GPUs with fewer switches, but complex routing and potential for local congestion if not tuned properly.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+For clusters up to a few thousand GPUs, Fat-Tree (Spine-Leaf) with InfiniBand or RoCEv2 is standard. For extreme scale (10k+ GPUs), Dragonfly or hierarchical topologies are considered.
 
+### 7) Glossary: Full Names and Explanations
+- **Fat-Tree**: A network topology where bandwidth increases as you move toward the core switches, ensuring non-blocking communication for all nodes.
+- **Bisection Bandwidth**: The total bandwidth available to connect two equal halves of a network; a key metric for evaluating the performance of distributed training workloads.
+- **Spine-Leaf Architecture**: A network topology common in data centers where "leaf" switches connect to servers (or compute nodes) and "spine" switches interconnect the leaf switches.
+- **Dragonfly Topology**: A network topology designed for very large-scale clusters, using high-radix switches and global groups to minimize the number of switches and links required.
 
 ---
 
-# Day 16: Day 16: AI Infra System Design Topic 16
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+## Day 42: Model Quantization - INT8, INT4, AWQ, GPTQ for Inference Acceleration
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 1) Topic and Core Examination Areas
+**Topic**: Model Quantization Techniques for LLM Inference.
+**Core Examination Areas**: Precision reduction (FP16/BF16 to INT8/INT4), per-channel vs per-tensor quantization, and algorithms like AWQ and GPTQ.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 2) Requirement Clarification and Metric Definitions
+- **FP16/BF16 (Half Precision)**: 16-bit floating point, standard for LLM inference/training. 70B model = 140GB.
+- **INT8 (8-bit Integer)**: Reduces model size by 2x, 70B model = 70GB.
+- **INT4 (4-bit Integer)**: Reduces model size by 4x, 70B model = 35GB.
+- **Quantization Error**: The accuracy degradation caused by reducing numerical precision.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 3) Core Architecture/Technical Component Design
+- **Quantization Engine**: Converts model weights from FP16 to INT8/INT4 and scales them dynamically during inference.
+- **Dequantization Layer**: Converts INT weights back to FP for computation, or uses INT-optimized CUDA kernels (e.g., INT4 matmul).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Post-Training Quantization (PTQ)**: Quantizes a pre-trained model without further training. 
+  - *AWQ (Activation-aware Weight Quantization)*: Preserves important weights based on activation distributions.
+  - *GPTQ (Generative Pre-trained Transformer Quantization)*: Uses second-order derivative information to quantize weights with minimal accuracy loss.
+- **Quantization-Aware Training (QAT)**: Simulates quantization during training to optimize weights for low precision.
 
+### 5) Trade-off Analysis
+- **FP16/BF16**: Highest accuracy, but high memory and compute cost.
+- **INT8/INT4 PTQ (AWQ/GPTQ)**: Significant memory and throughput gains, with minimal accuracy loss if done correctly (e.g., GPTQ for 4-bit).
 
----
+### 6) How to Determine the Optimal Solution
+For production LLM serving where memory and throughput are critical, 4-bit quantization using GPTQ or AWQ is optimal, provided the accuracy drop is acceptable for the use case.
 
-# Day 17: Day 17: AI Infra System Design Topic 17
+### 7) Glossary: Full Names and Explanations
+- **Quantization**: The process of converting model weights and activations from high-precision (e.g., FP16, FP32) to low-precision (e.g., INT8, INT4) formats to reduce memory and accelerate computation.
+- **FP16/BF16**: 16-bit floating-point formats. FP16 is standard half-precision; BF16 (Brain Floating Point) has the same dynamic range as FP32 but 16 bits, avoiding underflow during training.
+- **INT8/INT4**: 8-bit and 4-bit integer formats used for quantized model weights and activations.
+- **AWQ (Activation-aware Weight Quantization)**: A quantization method that identifies and preserves important weights based on the distribution of activations.
+- **GPTQ (Generative Pre-trained Transformer Quantization)**: A post-training quantization algorithm that uses second-order information to minimize accuracy loss when quantizing LLMs to low precision (e.g., 4-bit).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+## Day 43: Speculative Decoding and Accelerated Generation Techniques
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 1) Topic and Core Examination Areas
+**Topic**: Accelerating LLM Generation Inference.
+**Core Examination Areas**: Speculative decoding, draft models, and verification steps to increase tokens-per-second without sacrificing accuracy.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 2) Requirement Clarification and Metric Definitions
+- **Generation Latency**: Time to generate a sequence of N tokens.
+- **Draft Model**: A smaller, faster model (e.g., 7B) used to propose multiple next tokens.
+- **Target Model**: The large, accurate model (e.g., 70B) that verifies the draft model's proposals.
+- **Acceptance Rate**: The percentage of draft tokens that are accepted by the target model.
 
+### 3) Core Architecture/Technical Component Design
+- **Draft-Verify Architecture**: The draft model generates N candidate tokens in parallel. The target model verifies these tokens in a single forward pass using the correct KV cache.
 
----
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Speculative Decoding**: Uses a small draft model to generate multiple tokens quickly. The large target model then verifies these tokens. If accepted, it saves multiple forward passes of the large model.
+- **Nucleus Sampling + Speculation**: Ensures the draft model's distribution is close to the target model's to maintain high acceptance rates.
 
-# Day 18: Day 18: AI Infra System Design Topic 18
+### 5) Trade-off Analysis
+- **Standard Decoding**: One token per forward pass of the large model. High accuracy, but slower.
+- **Speculative Decoding**: Higher throughput (2x-5x tokens/sec), but requires additional memory to hold both draft and target models, and draft model quality is critical.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 6) How to Determine the Optimal Solution
+For interactive applications requiring low latency and high throughput, speculative decoding with a well-matched draft model (e.g., Llama-7B drafting for Llama-70B) is optimal.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 7) Glossary: Full Names and Explanations
+- **Speculative Decoding**: An inference acceleration technique where a smaller "draft" model proposes multiple next tokens, which are then verified by the larger "target" model in a single pass, increasing generation throughput.
+- **Draft Model**: A smaller, faster language model used in speculative decoding to generate candidate tokens quickly.
+- **Target Model**: The large, high-accuracy model that verifies and accepts or rejects the tokens proposed by the draft model.
+- **Acceptance Rate**: The proportion of candidate tokens generated by the draft model that are accepted by the target model's probability distribution.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+## Day 44: Retrieval-Augmented Generation (RAG) System Architecture and Infra
 
+### 1) Topic and Core Examination Areas
+**Topic**: RAG System Infrastructure and Design.
+**Core Examination Areas**: Document ingestion, embedding generation, vector storage, retrieval, and LLM generation integration.
 
----
+### 2) Requirement Clarification and Metric Definitions
+- **Document Volume**: e.g., 10 million documents or PDFs.
+- **Embedding Dimension**: e.g., 1536 dimensions for OpenAI text-embedding-3-small.
+- **Retrieval Latency**: Target < 100ms for vector search.
+- **QPS for Embedding Service**: e.g., 50 QPS for document ingestion.
 
-# Day 19: Day 19: AI Infra System Design Topic 19
+### 3) Core Architecture/Technical Component Design
+- **Ingestion Pipeline**: Text extraction (PDFs, HTML), chunking, embedding generation, and vector storage.
+- **Retrieval Service**: Vector database query engine.
+- **Generation Service**: LLM serving engine that incorporates retrieved context into the prompt.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Chunking Strategies**: Fixed-size, semantic, or recursive chunking to preserve context.
+- **Embedding Models**: Dedicated small models (e.g., BGE, text-embedding-ada) for generating vector representations.
+- **Hybrid Search**: Combining vector similarity search with keyword search (BM25) for better retrieval accuracy.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 5) Trade-off Analysis
+- **Vector-Only Search**: Good for semantic similarity, but may miss exact keyword matches.
+- **Hybrid Search (Vector + BM25)**: Higher accuracy, but more complex infrastructure and query routing.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 6) How to Determine the Optimal Solution
+For enterprise RAG systems where accuracy is critical, hybrid search (vector + keyword) with semantic chunking and a dedicated embedding serving infrastructure is optimal.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 7) Glossary: Full Names and Explanations
+- **RAG (Retrieval-Augmented Generation)**: An architecture where an LLM's generation is augmented by retrieving relevant information from an external knowledge base before generating a response.
+- **Embedding**: A dense vector representation of text (or other data) that captures semantic meaning, used for similarity search.
+- **Vector Database**: A specialized database optimized for storing and querying high-dimensional vectors, used for similarity search in RAG systems.
+- **BM25**: A ranking function used by search engines to estimate the relevance of documents to a given search query.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+## Day 45: Vector Databases and Embedding Serving Infrastructure
 
-# Day 20: Day 20: AI Infra System Design Topic 20
+### 1) Topic and Core Examination Areas
+**Topic**: Vector Database Infrastructure and Embedding Service Scaling.
+**Core Examination Areas**: Vector DB architectures (HNSW, IVF), embedding model serving, and throughput/latency trade-offs.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **Vector Dimension**: e.g., 1536 or 3072.
+- **HNSW (Hierarchical Navigable Small World)**: A graph-based indexing algorithm for approximate nearest neighbor (ANN) search.
+- **Latency Target**: p99 vector search latency < 50ms for 10M vectors.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 3) Core Architecture/Technical Component Design
+- **Embedding Serving Engine**: Serves the embedding model (e.g., using vLLM or TorchServe) to convert text chunks to vectors.
+- **Vector DB Cluster**: Distributes vector indices and data across multiple nodes for horizontal scaling.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **HNSW Index**: Provides high recall and low latency for ANN search but requires significant memory (10-20x the size of raw vectors).
+- **IVF (Inverted File Index)**: Clusters vectors into centroids; search is performed within relevant clusters. More memory-efficient than HNSW but higher latency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 5) Trade-off Analysis
+- **HNSW**: Best latency and recall, but high memory cost.
+- **IVF**: Lower memory usage, but higher latency and potentially lower recall.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 6) How to Determine the Optimal Solution
+For RAG systems requiring sub-100ms latency and high recall with available memory, HNSW is optimal. For very large vector sets with strict memory constraints, IVF or product quantization is preferred.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 7) Glossary: Full Names and Explanations
+- **HNSW (Hierarchical Navigable Small World)**: A graph-based algorithm for approximate nearest neighbor search that provides fast and accurate vector similarity search.
+- **IVF (Inverted File Index)**: A vector indexing method that partitions vectors into clusters (centroids) and searches only within the nearest clusters to reduce computation.
+- **ANN (Approximate Nearest Neighbor)**: A search method that finds vectors similar to a query vector with high probability, but not guaranteed to be the absolute closest.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 21: Day 21: AI Infra System Design Topic 21
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+## Day 46: Multi-Modal Model Serving (Vision-Language Models like LLaVA)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 1) Topic and Core Examination Areas
+**Topic**: Serving Vision-Language Models (VLMs).
+**Core Examination Areas**: Image encoding, multimodal token generation, and infrastructure differences compared to text-only LLMs.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 2) Requirement Clarification and Metric Definitions
+- **Image Resolution**: e.g., 336x336 or 768x768 pixels.
+- **Visual Tokens**: Number of tokens generated by the vision encoder for an image (e.g., 576 tokens for 336x336).
+- **TTFT for VLM**: Includes image encoding time + LLM TTFT. Target: < 1s.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 3) Core Architecture/Technical Component Design
+- **Vision Encoder**: A separate model (e.g., ViT - Vision Transformer) that converts images to visual tokens.
+- **Projection Layer**: Maps visual tokens to the LLM's text embedding space.
+- **LLM Decoder**: Generates text based on text and visual tokens.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Asynchronous Image Encoding**: Pre-process and cache image embeddings if the same image is requested multiple times.
+- **Batching VLM Requests**: Batching must align image resolutions and visual token counts to optimize GPU utilization.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **On-the-fly Image Encoding**: Flexible, but adds latency to TTFT.
+- **Pre-computed Embeddings**: Faster TTFT for repeated images, but requires storage and does not work for dynamic/new images.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+For VLM serving with diverse images, on-the-fly encoding with a highly optimized vision encoder (e.g., using TensorRT for the ViT) is optimal. Cache embeddings only for known, repeated images.
 
+### 7) Glossary: Full Names and Explanations
+- **VLM (Vision-Language Model)**: A multimodal model that processes and generates content across both visual (images) and textual modalities.
+- **ViT (Vision Transformer)**: A transformer-based model architecture designed for image classification and visual feature extraction.
+- **Visual Tokens**: The token representations of image data produced by a vision encoder, which are then fed into the language model's decoder.
 
 ---
 
-# Day 22: Day 22: AI Infra System Design Topic 22
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+## Day 47: AI Inference Optimization - Kernel Fusion and CUDA Optimization Basics
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 1) Topic and Core Examination Areas
+**Topic**: Low-Level Inference Optimization.
+**Core Examination Areas**: Kernel fusion, CUDA basics, and memory access patterns for GPU acceleration.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 2) Requirement Clarification and Metric Definitions
+- **Kernel**: A function executed on the GPU.
+- **Kernel Launch Overhead**: The CPU-to-GPU synchronization cost when starting a new kernel.
+- **Memory Coalescing**: Organizing memory accesses so that adjacent threads access adjacent memory addresses, maximizing bandwidth.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 3) Core Architecture/Technical Component Design
+- **Computation Graph**: Represents the model's operations. Fusion combines multiple operations into a single kernel.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Kernel Fusion**: Combines multiple small kernels (e.g., Add + Activation) into one larger kernel to reduce memory read/write operations and kernel launch overhead.
+- **CUDA Optimization**: Writing or using optimized CUDA/cuBLAS/cuDNN kernels for specific operations like attention or matmul.
 
+### 5) Trade-off Analysis
+- **Unfused Kernels**: Easier to debug and implement, but higher memory traffic and launch overhead.
+- **Fused Kernels**: Higher performance, but harder to debug and may increase GPU memory usage for intermediate buffers.
 
----
+### 6) How to Determine the Optimal Solution
+For production inference engines (vLLM, TensorRT-LLM), kernel fusion is standard and essential for achieving maximum throughput and minimum latency.
 
-# Day 23: Day 23: AI Infra System Design Topic 23
+### 7) Glossary: Full Names and Explanations
+- **Kernel (in GPU computing)**: A function that is executed on the GPU, typically in parallel across many threads.
+- **Kernel Fusion**: An optimization technique that combines multiple GPU kernels into a single kernel to reduce memory access and launch overhead.
+- **CUDA (Compute Unified Device Architecture)**: NVIDIA's parallel computing platform and programming model for utilizing GPUs for general-purpose processing.
+- **Memory Coalescing**: A GPU memory access pattern where adjacent threads access adjacent memory locations, maximizing memory bandwidth utilization.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+## Day 48: Serving System Architecture - vLLM, TGI, TensorRT-LLM Comparison
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 1) Topic and Core Examination Areas
+**Topic**: LLM Serving Frameworks Comparison.
+**Core Examination Areas**: vLLM, Hugging Face TGI (Text Generation Inference), and NVIDIA TensorRT-LLM.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 2) Requirement Clarification and Metric Definitions
+- **Framework Selection Criteria**: Throughput, latency, ease of use, model support, and quantization support.
+- **TPS Target**: e.g., 5000 tokens/sec per 8xH100 node.
 
+### 3) Core Architecture/Technical Component Design
+- **vLLM**: Uses PagedAttention and continuous batching. Python-heavy, easy to integrate with Hugging Face models.
+- **TGI**: Hugging Face's production serving framework, supports quantization (GPTQ, AWQ) and speculative decoding.
+- **TensorRT-LLM**: NVIDIA's high-performance framework using kernel fusion and TensorRT optimizations for maximum throughput.
 
----
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **vLLM**: Best balance of ease-of-use and high throughput via PagedAttention. Strong community support.
+- **TensorRT-LLM**: Highest performance for NVIDIA GPUs, but requires model conversion to TensorRT format and is less flexible for rapid model experimentation.
+- **TGI**: Good for Hugging Face ecosystem integration, supports many quantization formats and serving features out-of-the-box.
 
-# Day 24: Day 24: AI Infra System Design Topic 24
+### 5) Trade-off Analysis
+- **vLLM**: High throughput, easy to use, but less low-level optimization than TensorRT-LLM.
+- **TensorRT-LLM**: Maximum performance, but steeper learning curve and requires NVIDIA ecosystem.
+- **TGI**: Excellent Hugging Face integration, but throughput may not match vLLM or TensorRT-LLM for very large batches.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 6) How to Determine the Optimal Solution
+For rapid deployment and ease of use with Hugging Face models, vLLM or TGI. For maximum production throughput on NVIDIA GPUs with converted models, TensorRT-LLM.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 7) Glossary: Full Names and Explanations
+- **vLLM**: An open-source LLM serving framework that uses PagedAttention and continuous batching for high-throughput inference.
+- **TGI (Text Generation Inference)**: Hugging Face's production-ready framework for serving LLMs, supporting quantization and speculative decoding.
+- **TensorRT-LLM**: NVIDIA's high-performance library for optimizing and serving LLMs using TensorRT kernel fusion and optimizations.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+## Day 49: AI Training Data Pipeline - Data Loading, Preprocessing, and Distributed Dataloaders
 
+### 1) Topic and Core Examination Areas
+**Topic**: Data Pipeline Infrastructure for LLM Training.
+**Core Examination Areas**: Distributed dataloaders, data shuffling, preprocessing at scale, and avoiding I/O bottlenecks.
 
----
+### 2) Requirement Clarification and Metric Definitions
+- **Training Dataset Size**: e.g., 10 trillion tokens.
+- **Data Loading Throughput**: Must match or exceed GPU compute throughput (e.g., 10-20 GB/s per node).
+- **Sharding**: Splitting the dataset across multiple workers/gpus.
 
-# Day 25: Day 25: AI Infra System Design Topic 25
+### 3) Core Architecture/Technical Component Design
+- **Data Ingestion Service**: Pulls data from object storage (S3) or distributed filesystems.
+- **Preprocessing Cluster**: Tokenizes and formats data into training sequences.
+- **Distributed DataLoader**: Ensures each GPU receives a unique, shuffled subset of the data.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Prefetching and Async Loading**: Overlaps data loading with GPU computation to hide I/O latency.
+- **WebDataset / LMFormat**: Efficient data formats for streaming large-scale training data without full local download.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 5) Trade-off Analysis
+- **Full Local Download**: Simple, but wastes storage and bandwidth.
+- **Streaming from Object Storage**: Saves local storage, but requires high network bandwidth and efficient streaming clients.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 6) How to Determine the Optimal Solution
+For trillion-token training, streaming data formats (WebDataset, parquet) with async dataloaders and prefetching is optimal to keep GPUs fed without I/O bottlenecks.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 7) Glossary: Full Names and Explanations
+- **Distributed DataLoader**: A component that splits and feeds training data to multiple GPUs or workers in a distributed training setup.
+- **Prefetching**: A technique where data is loaded into memory or cache before it is needed by the GPU, hiding I/O latency.
+- **WebDataset**: An efficient format and streaming protocol for large-scale machine learning datasets, designed for high-throughput data loading.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+## Day 50: Fault Tolerance and Checkpointing in Large-Scale AI Training
 
-# Day 26: Day 26: AI Infra System Design Topic 26
+### 1) Topic and Core Examination Areas
+**Topic**: Fault Tolerance Mechanisms for LLM Training.
+**Core Examination Areas**: Checkpointing strategies, failure recovery, and minimizing downtime in 1000+ GPU clusters.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **RTO (Recovery Time Objective)**: Target time to recover from a failure (e.g., < 30 minutes).
+- **Checkpoint Frequency**: e.g., every 1000 steps or every 1 hour.
+- **Failure Rate**: In a 1000-GPU cluster, the probability of at least one GPU failing per day is high (often >50%).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 3) Core Architecture/Technical Component Design
+- **Checkpoint Storage**: High-speed distributed storage (NVMe cluster or optimized S3) for saving model states, optimizer states, and train state.
+- **Watchdog/Health Check Service**: Monitors GPU and node health, triggers checkpointing before failure.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Synchronous Checkpointing**: Stops training to save state. Accurate but causes downtime.
+- **Asynchronous/Incremental Checkpointing**: Saves only changed states or uses ZeRO-Infinity to offload states to CPU/NVMe, reducing checkpoint time.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 5) Trade-off Analysis
+- **Frequent Checkpointing**: Low recovery time, but high storage I/O overhead and training pause.
+- **Infrequent Checkpointing**: Less I/O overhead, but higher risk of losing more work if a failure occurs.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 6) How to Determine the Optimal Solution
+For large clusters, use incremental checkpointing with ZeRO-3/Infinity and a balanced checkpoint frequency (e.g., every 1-2 hours) to minimize both I/O overhead and recovery loss.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 7) Glossary: Full Names and Explanations
+- **Checkpointing**: The process of saving the state of a training job (model weights, optimizer states, step number) to storage to enable recovery from failures.
+- **RTO (Recovery Time Objective)**: The target duration of time within which a business process must be restored after a disaster or failure.
+- **ZeRO-Infinity**: An extension of DeepSpeed ZeRO that offloads sharded parameters, gradients, and optimizer states to CPU memory and NVMe storage, enabling training of extremely large models.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 27: Day 27: AI Infra System Design Topic 27
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+## Day 51: AI Cluster Management - Kubernetes, Slurm, and GPU Scheduling
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 1) Topic and Core Examination Areas
+**Topic**: Cluster Management and Orchestration for AI Workloads.
+**Core Examination Areas**: Kubernetes vs Slurm, GPU scheduling, and multi-tenancy support.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 2) Requirement Clarification and Metric Definitions
+- **Job Type**: Training (long-running, full node) vs Inference (stateless, scalable).
+- **GPU Utilization Target**: >70% for training clusters.
+- **Queue System**: Manages job scheduling and resource allocation.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 3) Core Architecture/Technical Component Design
+- **Slurm**: Traditional HPC scheduler, excellent for long-running training jobs and full-node allocations.
+- **Kubernetes (K8s)**: Cloud-native orchestration, excellent for inference services and microservices, with GPU operator support for GPU sharing.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Slurm for Training**: Simple node allocation, integrates well with MPI and distributed training frameworks.
+- **Kubernetes for Inference**: Auto-scaling, load balancing, and service discovery for LLM serving endpoints. GPU operators (e.g., NVIDIA GPU Operator) enable containerized GPU workloads.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **Slurm**: Best for HPC and large training jobs, but less flexible for microservices and auto-scaling.
+- **Kubernetes**: Best for inference and MLOps pipelines, but complex to configure for large-scale distributed training with MPI.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+Use Slurm for large-scale LLM training clusters and Kubernetes for inference serving and MLOps pipelines. Many organizations use a hybrid approach.
 
+### 7) Glossary: Full Names and Explanations
+- **Slurm**: A widely used open-source job scheduler for Linux clusters, commonly used in HPC and AI training environments.
+- **Kubernetes (K8s)**: An open-source container orchestration platform for automating deployment, scaling, and management of containerized applications.
+- **GPU Operator**: A Kubernetes tool (by NVIDIA) that simplifies the management of GPUs in Kubernetes clusters, including driver installation and device plugin management.
 
 ---
 
-# Day 28: Day 28: AI Infra System Design Topic 28
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+## Day 52: Monitoring and Observability for AI Infra - Metrics, Logging, Tracing
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 1) Topic and Core Examination Areas
+**Topic**: Observability Infrastructure for AI Systems.
+**Core Examination Areas**: Metrics collection (GPU utilization, temperature), logging, and distributed tracing for LLM serving and training.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 2) Requirement Clarification and Metric Definitions
+- **GPU Utilization**: Percentage of time the GPU is actively processing data. Target: >80% for training.
+- **GPU Memory Usage**: GB of HBM used. Must monitor for OOM (Out of Memory) errors.
+- **Metrics Exporters**: e.g., NVIDIA DCGM (Data Center GPU Manager) exporter for Prometheus.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 3) Core Architecture/Technical Component Design
+- **Metrics Collection Pipeline**: Agents on each node collect GPU and system metrics and send to a time-series database (Prometheus).
+- **Logging Aggregator**: Collects application and system logs (ELK stack or Loki).
+- **Tracing**: OpenTelemetry or Jaeger for tracing LLM serving requests across components.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **DCGM (Data Center GPU Manager)**: NVIDIA's tool for monitoring and managing GPU health, utilization, and metrics.
+- **Prometheus + Grafana**: Standard stack for metrics collection and visualization.
 
+### 5) Trade-off Analysis
+- **Custom Monitoring Scripts**: Simple, but lack scalability and standard integration.
+- **Prometheus/DCGM Stack**: Standardized, scalable, but requires infrastructure setup and maintenance.
 
----
-
-# Day 29: Day 29: AI Infra System Design Topic 29
+### 6) How to Determine the Optimal Solution
+For production AI infra, the Prometheus + DCGM exporter + Grafana stack for metrics, combined with centralized logging (Loki/ELK), is optimal.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 7) Glossary: Full Names and Explanations
+- **DCGM (Data Center GPU Manager)**: NVIDIA's toolkit for monitoring, managing, and configuring GPU systems and data center workloads.
+- **Prometheus**: An open-source monitoring and alerting toolkit designed for reliability and scalability, commonly used with time-series metrics.
+- **Grafana**: An open-source platform for monitoring and observability, providing dashboards for metrics collected by Prometheus and other sources.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+---
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+================================================================================
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+## Day 53: Energy Efficiency and Cooling in AI Data Centers
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 1) Topic and Core Examination Areas
+**Topic**: Power and Cooling Infrastructure for AI Clusters.
+**Core Examination Areas**: Power density, liquid cooling, and energy efficiency metrics (PUE).
 
+### 2) Requirement Clarification and Metric Definitions
+- **Power per Rack**: e.g., traditional racks: 10-20 kW; AI racks (8x H100): 120-240 kW.
+- **PUE (Power Usage Effectiveness)**: Ratio of total facility power to IT equipment power. Target: < 1.2 for modern data centers.
+- **Liquid Cooling**: Direct-to-chip or immersion cooling to handle high heat density.
 
----
+### 3) Core Architecture/Technical Component Design
+- **Power Distribution Units (PDUs)**: High-capacity PDUs to deliver power to AI racks.
+- **Cooling Systems**: Air cooling (limited to ~30 kW/rack), liquid cooling (direct-to-chip cold plates or immersion).
 
-# Day 30: Day 30: AI Infra System Design Topic 30
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Air Cooling**: Standard, but insufficient for 100+ kW racks.
+- **Liquid Cooling (Cold Plates)**: Directs coolant through plates attached to GPUs and CPUs. Effective for 120-240 kW/rack.
+- **Immersion Cooling**: Submerges servers in dielectric fluid. Highest efficiency, but complex deployment and maintenance.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 5) Trade-off Analysis
+- **Air Cooling**: Lower upfront cost, but cannot support high-density AI racks.
+- **Liquid Cooling**: Higher upfront cost and infrastructure change, but necessary for H100/Blackwell clusters and improves PUE.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 6) How to Determine the Optimal Solution
+For clusters with 8x H100 or Blackwell GPUs per rack, liquid cooling (cold plates) is the optimal and often mandatory solution.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 7) Glossary: Full Names and Explanations
+- **PUE (Power Usage Effectiveness)**: A metric measuring the efficiency of a data center, calculated as total facility power divided by IT equipment power. Lower is better (ideal is 1.0).
+- **Cold Plate Cooling**: A liquid cooling method where coolant flows through plates attached directly to heat-generating components like GPUs and CPUs.
+- **Immersion Cooling**: A cooling technique where servers are submerged in a thermally conductive but electrically insulating dielectric fluid.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+---
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+================================================================================
 
+## Day 54: Edge AI and On-Device Inference Optimization
 
----
+### 1) Topic and Core Examination Areas
+**Topic**: Edge AI Inference and On-Device Optimization.
+**Core Examination Areas**: Model compression for edge devices, NPU/GPU acceleration, and latency/privacy benefits.
 
-## DAYS-31-60
+### 2) Requirement Clarification and Metric Definitions
+- **Edge Device Constraints**: e.g., 8GB RAM, 15W TDP (Thermal Design Power) for mobile or edge servers.
+- **On-Device Inference**: Running LLMs or smaller models directly on user devices without cloud connectivity.
+- **Latency Target**: < 100ms for local inference responses.
 
-# Day 31: Day 31: AI Infra System Design Topic 31
+### 3) Core Architecture/Technical Component Design
+- **Edge Inference Engine**: e.g., Qualcomm SNPE, NVIDIA Jetson TensorRT, or Apple CoreML.
+- **Model Compression**: Quantization (INT8/INT4), pruning, and knowledge distillation to fit models on edge hardware.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Quantization for Edge**: 4-bit or 8-bit quantization to reduce model size and enable INT inference on NPUs.
+- **Distillation**: Training a small "student" model to mimic a large "teacher" model for edge deployment.
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+### 5) Trade-off Analysis
+- **Cloud Inference**: High accuracy, scalable, but latency and privacy concerns.
+- **Edge Inference**: Low latency, privacy-preserving, but limited model size and accuracy.
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
+### 6) How to Determine the Optimal Solution
+For privacy-sensitive or low-latency applications (e.g., on-device assistants), edge inference with quantized 3B-7B models is optimal. For complex tasks, cloud inference is required.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
+### 7) Glossary: Full Names and Explanations
+- **Edge AI**: Running AI models on local devices (phones, edge servers) rather than in centralized cloud data centers.
+- **NPU (Neural Processing Unit)**: A specialized processor designed to accelerate machine learning and neural network workloads.
+- **TDP (Thermal Design Power)**: The maximum amount of heat generated by a component that the cooling system must dissipate, often used to indicate power consumption.
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+---
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
 
+================================================================================
 
----
+## Day 55: Fine-Tuning Infrastructure - LoRA, QLoRA, and Parameter-Efficient Fine-Tuning (PEFT)
 
-# Day 32: Day 32: AI Infra System Design Topic 32
+### 1) Topic and Core Examination Areas
+**Topic**: Parameter-Efficient Fine-Tuning (PEFT) Infrastructure.
+**Core Examination Areas**: LoRA, QLoRA, and how they reduce the compute and memory requirements for fine-tuning LLMs.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 2) Requirement Clarification and Metric Definitions
+- **Full Fine-Tuning Memory**: For a 70B model, full fine-tuning requires 4-6x GPU memory (optimizers + gradients + parameters), >500GB.
+- **LoRA Rank (r)**: The dimension of the low-rank matrices. Typical values: 8, 16, 64.
+- **QLoRA**: Quantized LoRA, combines 4-bit quantization with LoRA fine-tuning.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 3) Core Architecture/Technical Component Design
+- **LoRA Modules**: Injects trainable low-rank matrices into the attention layers of the frozen pre-trained model.
+- **PEFT Framework**: Hugging Face PEFT library manages LoRA, QLoRA, and other efficient fine-tuning methods.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **LoRA (Low-Rank Adaptation)**: Freezes the base model and trains only small adapter matrices, reducing trainable parameters by >90%.
+- **QLoRA**: Applies 4-bit quantization to the base model and uses LoRA on top, enabling fine-tuning of 70B models on a single 24GB/40GB GPU.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 5) Trade-off Analysis
+- **Full Fine-Tuning**: Highest performance, but requires massive GPU memory and compute.
+- **LoRA/QLoRA**: Drastically reduces memory and compute, with minimal accuracy loss for many tasks.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 6) How to Determine the Optimal Solution
+For most fine-tuning and adaptation tasks, LoRA or QLoRA is optimal due to the significant reduction in infrastructure requirements and cost.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 7) Glossary: Full Names and Explanations
+- **PEFT (Parameter-Efficient Fine-Tuning)**: A set of techniques that fine-tune only a small subset of a model's parameters, leaving the majority frozen, to reduce compute and memory requirements.
+- **LoRA (Low-Rank Adaptation)**: A PEFT method that injects trainable low-rank matrices into the model's layers, significantly reducing the number of trainable parameters.
+- **QLoRA (Quantized LoRA)**: A fine-tuning method that combines 4-bit quantization of the base model with LoRA adapters, enabling fine-tuning of large models on limited GPU memory.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 33: Day 33: AI Infra System Design Topic 33
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+## Day 56: Multi-Instance GPU (MIG) and GPU Partitioning for Multi-Tenancy
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 1) Topic and Core Examination Areas
+**Topic**: GPU Virtualization and Multi-Tenancy.
+**Core Examination Areas**: MIG (Multi-Instance GPU), GPU partitioning, and isolation for shared infrastructure.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 2) Requirement Clarification and Metric Definitions
+- **GPU Partitioning**: Splitting a single GPU into multiple isolated instances.
+- **MIG Instances**: e.g., on an A100 80GB, MIG can create up to 7 instances of varying memory/compute configurations (e.g., 3g.20gb).
+- **Tenancy Isolation**: Ensuring one tenant's workload does not impact another's performance or security.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 3) Core Architecture/Technical Component Design
+- **MIG Controller**: Manages the creation, configuration, and isolation of GPU instances.
+- **Container Integration**: Kubernetes or Docker can schedule workloads on specific MIG instances.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **MIG (Multi-Instance GPU)**: Partitions a GPU into separate instances, each with its own memory, compute cores, and cache. Provides hardware-level isolation.
+- **Time-Slicing**: Software-based GPU sharing where multiple containers share the same GPU by alternating execution time. Lower isolation, but more flexible.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 5) Trade-off Analysis
+- **MIG**: Strong hardware isolation, deterministic performance, but reduces flexibility (fixed partitions).
+- **Time-Slicing**: Flexible resource sharing, but no hardware isolation and potential performance interference.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 6) How to Determine the Optimal Solution
+For multi-tenant cloud inference or fine-tuning services requiring strict SLAs and isolation, MIG is optimal. For internal shared development GPUs, time-slicing may suffice.
 
+### 7) Glossary: Full Names and Explanations
+- **MIG (Multi-Instance GPU)**: A technology (primarily on NVIDIA A100/H100 GPUs) that partitions a single GPU into multiple isolated instances, each with dedicated memory and compute resources.
+- **Time-Slicing**: A GPU sharing technique where multiple workloads share a single GPU by taking turns using its compute resources in time intervals.
 
 ---
 
-# Day 34: Day 34: AI Infra System Design Topic 34
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+## Day 57: AI Model Registry and MLOps Pipeline Infrastructure
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 1) Topic and Core Examination Areas
+**Topic**: MLOps and Model Registry Infrastructure.
+**Core Examination Areas**: Model versioning, artifact storage, and CI/CD for ML models.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 2) Requirement Clarification and Metric Definitions
+- **Model Artifacts**: Checkpoints, quantized versions, configuration files.
+- **Model Registry**: Centralized repository for model versions, metadata, and deployment status.
+- **CI/CD for ML**: Automated testing, validation, and deployment of model versions.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 3) Core Architecture/Technical Component Design
+- **Model Storage**: Object storage (S3) or distributed filesystem for model weights.
+- **Model Registry Service**: e.g., MLflow Model Registry, Hugging Face Hub, or custom registry.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **MLflow Model Registry**: Open-source platform for managing the ML lifecycle, including model versioning and staging.
+- **Hugging Face Hub**: Community and enterprise platform for hosting, versioning, and sharing models and datasets.
 
+### 5) Trade-off Analysis
+- **Custom Registry**: Tailored to specific needs, but requires development and maintenance.
+- **Managed Services (MLflow/HF Hub)**: Faster to deploy, rich features, but may have limitations or costs.
 
----
+### 6) How to Determine the Optimal Solution
+For most organizations, MLflow Model Registry or Hugging Face Hub (for open-source or private HF Enterprise) provides the optimal balance of features and ease of use.
 
-# Day 35: Day 35: AI Infra System Design Topic 35
+### 7) Glossary: Full Names and Explanations
+- **MLOps (Machine Learning Operations)**: The practice of applying DevOps principles to machine learning workflows, including training, deployment, and monitoring.
+- **Model Registry**: A centralized system for storing, versioning, and managing machine learning models and their metadata.
+- **MLflow**: An open-source platform for managing the end-to-end machine learning lifecycle, including tracking, packaging, and deployment.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
-
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+---
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+================================================================================
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+## Day 58: A/B Testing and Canary Deployments for LLM Services
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 1) Topic and Core Examination Areas
+**Topic**: Deployment Strategies for LLM Serving.
+**Core Examination Areas**: Canary releases, A/B testing, and traffic routing for model updates.
 
+### 2) Requirement Clarification and Metric Definitions
+- **Canary Deployment**: Releasing a new model version to a small percentage of traffic (e.g., 5%) before full rollout.
+- **A/B Testing**: Comparing two model versions (or prompts) by splitting traffic and measuring metrics like user engagement or accuracy.
+- **Rollback Time**: Time to revert to the previous model version if the new one performs poorly.
 
----
+### 3) Core Architecture/Technical Component Design
+- **Feature Flag / Routing Layer**: API gateway or service mesh that routes traffic to different model versions based on rules or percentages.
+- **Metrics Comparison Dashboard**: Compares TTFT, TPS, and business metrics between versions.
 
-# Day 36: Day 36: AI Infra System Design Topic 36
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Canary Releases**: Minimize risk by exposing the new model to a small user segment. Monitor for errors or latency degradation.
+- **Shadow Deployments**: Route live traffic to both old and new models, but only use the new model's outputs for testing, not for user response.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 5) Trade-off Analysis
+- **Big Bang Release**: Fast rollout, but high risk if the new model has issues.
+- **Canary/Shadow Deployment**: Lower risk, allows validation, but requires infrastructure to route and compare traffic.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 6) How to Determine the Optimal Solution
+For production LLM serving, canary deployments with shadow testing and metrics comparison are optimal to ensure new model versions do not degrade user experience.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 7) Glossary: Full Names and Explanations
+- **Canary Deployment**: A release strategy where a new version of a service or model is deployed to a small subset of users or traffic before a full rollout.
+- **A/B Testing**: An experiment where two versions (A and B) are compared by splitting traffic to measure which performs better against specific metrics.
+- **Shadow Deployment**: A testing technique where live traffic is sent to a new model version in the background, but the user only receives the response from the stable version.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+---
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+================================================================================
 
+## Day 59: Cost Optimization and Right-Sizing for AI Infra
 
----
+### 1) Topic and Core Examination Areas
+**Topic**: Financial and Resource Optimization for AI Systems.
+**Core Examination Areas**: GPU right-sizing, spot instances, and cost monitoring for training and inference.
 
-# Day 37: Day 37: AI Infra System Design Topic 37
+### 2) Requirement Clarification and Metric Definitions
+- **Cost per Training Hour**: e.g., 8xH100 cluster cost per hour in the cloud or TCO (Total Cost of Ownership) for on-prem.
+- **GPU Utilization Metric**: Average compute and memory utilization across the cluster.
+- **Right-Sizing**: Matching GPU type and quantity to the workload's actual requirements (e.g., using L4 for inference instead of H100 if performance permits).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 3) Core Architecture/Technical Component Design
+- **Cost Monitoring Dashboard**: Tracks GPU hours, storage costs, and network egress.
+- **Auto-Scaling Inference Clusters**: Scales GPU instances based on QPS or queue length to avoid over-provisioning.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Spot Instances**: Discounted cloud GPU instances that can be reclaimed with short notice. Suitable for fault-tolerant training with checkpointing.
+- **Mixed GPU Types**: Using older or lower-tier GPUs (e.g., A10G, L4) for embedding services or smaller models, reserving H100 for large model training/inference.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 5) Trade-off Analysis
+- **On-Demand GPUs**: Highest availability and reliability, but most expensive.
+- **Spot Instances**: Significant cost savings (up to 70%), but risk of interruption requires robust checkpointing and fault tolerance.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 6) How to Determine the Optimal Solution
+For training, use spot instances with frequent checkpointing. For inference, use auto-scaling with right-sized GPU types (e.g., quantized models on L4 or A10G) to optimize cost per token.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 7) Glossary: Full Names and Explanations
+- **TCO (Total Cost of Ownership)**: The total cost of acquiring, operating, and maintaining AI infrastructure over its lifetime, including hardware, software, power, and cooling.
+- **Spot Instances**: Cloud computing resources that are available at a discounted price but can be reclaimed by the cloud provider with short notice.
+- **Right-Sizing**: The practice of selecting the appropriate hardware (e.g., GPU type, memory size) to match the specific requirements of a workload, avoiding over-provisioning.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+---
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
 
----
+================================================================================
 
-# Day 38: Day 38: AI Infra System Design Topic 38
+## Day 60: Future Trends in AI Infra - Chiplet, Optical Interconnects, and Novel Architectures
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### 1) Topic and Core Examination Areas
+**Topic**: Future Trends and Emerging Technologies in AI Infrastructure.
+**Core Examination Areas**: Chiplet designs, optical interconnects, PIM (Processing-in-Memory), and novel GPU/ASIC architectures.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+### 2) Requirement Clarification and Metric Definitions
+- **Chiplet**: A small, modular piece of a semiconductor chip that can be combined with other chiplets to form a larger chip.
+- **Optical Interconnects**: Using light (photons) instead of electrical signals for data transfer between chips or nodes, offering higher bandwidth and lower latency.
+- **PIM (Processing-in-Memory)**: Architecture where computation happens within or next to memory units, reducing data movement overhead.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### 3) Core Architecture/Technical Component Design
+- **Chiplet-Based GPUs**: Breaking large GPU dies into smaller chiplets connected by high-speed interconnects (e.g., UCIe - Universal Chiplet Interconnect Express).
+- **Optical Switching Networks**: Replacing electrical switches with optical switches for AI cluster networking to reduce latency and power consumption.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### 4) Deep Dive into Key Technologies and Possible Solutions
+- **Chiplets**: Allow for more flexible manufacturing, yield improvement, and customization by mixing different process nodes for compute, memory, and I/O chiplets.
+- **Optical Interconnects**: Offer potential for 10x bandwidth and 1/10th power of electrical interconnects, but are in early stages of adoption for data centers.
+- **PIM / HBM Integration**: Moving compute units closer to HBM to alleviate the memory wall problem for LLMs.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### 5) Trade-off Analysis
+- **Monolithic GPUs**: Simpler design, but manufacturing large dies (e.g., B200) has low yield and high cost.
+- **Chiplets**: Higher design complexity and interconnect overhead, but better yield and scalability.
+- **Optical vs Electrical Networking**: Optical offers superior bandwidth and power efficiency, but is currently more expensive and less mature.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### 6) How to Determine the Optimal Solution
+For near-term (1-3 years), chiplet-based GPUs and continued NVLink/NVSwitch evolution are optimal. For long-term (5+ years), optical interconnects and PIM architectures will likely become standard for exascale AI systems.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### 7) Glossary: Full Names and Explanations
+- **Chiplet**: A small, modular semiconductor die that is designed to be combined with other chiplets to form a larger, more complex chip.
+- **UCIe (Universal Chiplet Interconnect Express)**: An open standard for chiplet-to-chiplet interconnects, enabling heterogeneous integration of chiplets from different manufacturers.
+- **Optical Interconnects**: Data transfer technologies that use light (photons) instead of electrical signals, offering higher bandwidth and lower power consumption.
+- **PIM (Processing-in-Memory)**: A computing architecture that performs computations within or adjacent to memory units, reducing the energy and latency associated with moving data between memory and compute.
 
+================================================================================
 
----
+### **Day 61: Data Ingestion and ETL/ELT Pipelines for ML Models**
 
-# Day 39: Day 39: AI Infra System Design Topic 39
+**1) Topic and Core Examination Areas**
+- Data ingestion patterns (batch vs streaming)
+- ETL (Extract, Transform, Load) vs ELT (Extract, Load, Transform) pipelines
+- Data pipeline orchestration and reliability
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Data ingestion volume: 10 TB/day of structured and unstructured data
+- QPS (Queries Per Second) of ingestion endpoints: ~10,000 QPS for real-time event streams
+- Throughput (TPS - Transactions Per Second): 5,000 TPS for batch ETL jobs
+- Latency metrics: Batch ETL SLA: T+1 day (24 hours); Stream processing latency: P99 < 2 seconds
+- Storage capacity: Data Lake (e.g., AWS S3) requires 100 TB initial, growing at 1 TB/week
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- Data Sources: APIs, databases (PostgreSQL, MongoDB), event logs
+- Ingestion Layer: Apache Kafka or AWS Kinesis for stream data; AWS DMS or Fivetran for database sync
+- Processing Layer: Apache Spark (batch), Apache Flink (stream)
+- Storage Layer: Data Lake (S3, Parquet format), Data Warehouse (Snowflake, BigQuery)
+- Orchestration: Apache Airflow or Prefect
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Batch ETL vs Stream ETL**: Batch ETL processes data in large chunks at scheduled intervals (e.g., nightly). Stream ETL processes data continuously as it arrives.
+- **ETL vs ELT**: ETL transforms data before loading into the target warehouse; ELT loads raw data first, then transforms inside the warehouse using its compute power.
+- **Orchestration Tools**: Apache Airflow uses DAGs (Directed Acyclic Graphs) and is Python-centric; Prefect offers modern workflow orchestration with better error handling and dynamic task generation.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- ETL vs ELT: ETL requires more compute in the transformation layer and is better for strict data governance before storage; ELT leverages modern DW compute, is faster to implement, but raw data is stored first.
+- Batch vs Stream: Batch is cost-effective, easier to debug, and guarantees exactly-once processing; Stream provides low latency but is complex to manage (state management, watermarking).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- If business requires real-time dashboards or real-time ML features (e.g., fraud detection), choose Stream ETL + Kafka + Flink.
+- If business is analytics-focused with T+1 requirements, choose ELT + Spark + Airflow + Data Warehouse.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **ETL**: Extract, Transform, Load. A process to collect data, transform it to fit a target schema, and load it into a destination.
+- **ELT**: Extract, Load, Transform. Similar to ETL but load happens before transformation.
+- **QPS**: Queries Per Second. A measure of the number of queries or requests a system can handle per second.
+- **TPS**: Transactions Per Second. A measure of the number of transactions a system processes per second.
+- **P99 Latency**: The 99th percentile latency, meaning 99% of requests are faster than this value.
+- **DAG**: Directed Acyclic Graph. A graph with nodes and directed edges that has no cycles, used to represent workflow dependencies.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 40: Day 40: AI Infra System Design Topic 40
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 62: Data Versioning, Lineage, and Datasets (DVC, MLflow)**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Data versioning control (similar to Git for code)
+- Data lineage and traceability
+- Experiment tracking and dataset management
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- Dataset size: 500 GB of training data, versioned weekly
+- Number of experiments: 200+ model training experiments per month
+- Lineage tracking: Must trace model predictions back to the exact dataset version and feature configuration
+- Storage metric: Versioned data storage cost ~$50/TB/month
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- Versioning Layer: DVC (Data Version Control) for data, models, and metrics integration with Git
+- Experiment Tracking: MLflow or Weights & Biases (W&B)
+- Storage: S3 or GCS for data and model artifacts; Git for code and DVC metafiles
+- Lineage Tool: Apache Atlas or MLflow Projects
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **DVC vs Git LFS**: Git LFS stores large files directly in the Git repository, which can bloat the repo. DVC stores data in remote storage (S3/GCS) and keeps only metafiles (`.dvc`) in Git, enabling efficient versioning.
+- **MLflow vs W&B**: MLflow is open-source, modular (Tracking, Projects, Models, Registry), and self-hostable. W&B is a SaaS-first platform with rich visualization and collaboration features but can be costlier at scale.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- DVC: Lightweight, integrates with Git, but requires custom pipeline for complex lineage.
+- MLflow: Comprehensive experiment tracking and model registry, but can be complex to set up for full data lineage.
+- W&B: Excellent UX and real-time collaboration, but vendor lock-in and higher cost for large teams.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For open-source, self-hosted, and Git-integrated data versioning, choose DVC + S3.
+- For comprehensive experiment tracking and model registry with a team, choose MLflow.
+- For SaaS-first, rich visualization, and AI research teams, choose W&B.
 
+**7) Full names and explanations of nouns and abbreviations**
+- **DVC**: Data Version Control. An open-source version control system for machine learning projects.
+- **Git LFS**: Git Large File Storage. An extension for Git to handle large files.
+- **MLflow**: An open-source platform to manage the ML lifecycle (experiment tracking, packaging, deployment).
+- **W&B**: Weights & Biases. A SaaS platform for experiment tracking, visualization, and collaboration.
+- **S3**: Amazon Simple Storage Service. Object storage service offered by AWS.
+- **GCS**: Google Cloud Storage. Object storage service offered by Google Cloud.
 
 ---
 
-# Day 41: Day 41: AI Infra System Design Topic 41
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### **Day 63: Feature Stores and Real-time Feature Serving**
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Feature store architecture (offline vs online stores)
+- Feature serving latency and consistency
+- Feature reuse and governance
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- Online feature serving QPS: 50,000 QPS for real-time inference
+- Online feature latency: P99 < 10 ms
+- Offline feature store size: 10 TB of historical features
+- Feature freshness: SLA of 5 minutes for real-time features
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- Feature Computation: Spark batch jobs for offline features; Flink for real-time features
+- Offline Store: Parquet files in S3 or a data warehouse (Snowflake)
+- Online Store: Redis, DynamoDB, or Cassandra for low-latency feature lookup
+- Feature Store Layer: Feast or Hopsworks
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Feast vs Hopsworks**: Feast is an open-source feature store that orchestrates offline/online stores and is cloud-agnostic. Hopsworks is a comprehensive AI platform with a built-in feature store, data science workspace, and model serving.
+- **Redis vs DynamoDB for Online Store**: Redis offers sub-millisecond latency and supports complex data structures (hashes, sorted sets). DynamoDB offers fully managed scalability and integrates well with AWS ecosystem but has higher base latency (~10ms P99).
 
+**5) Trade-off analysis**
+- Offline vs Online consistency: Offline store ensures historical accuracy; online store ensures low-latency serving. Synchronization latency (e.g., via batch backfills or change data capture) must be managed.
+- Redis vs NoSQL (DynamoDB/Cassandra): Redis is in-memory and faster but more expensive per GB; NoSQL is cheaper for large-scale feature storage but has higher latency.
 
----
+**6) How to determine the optimal solution**
+- For open-source, cloud-agnostic, and Kafka/Spark ecosystems, choose Feast.
+- For an all-in-one AI platform with feature store, model registry, and serving, choose Hopsworks.
+- For low-latency (<5ms) online features, choose Redis; for high-throughput, cost-effective storage, choose DynamoDB or Cassandra.
 
-# Day 42: Day 42: AI Infra System Design Topic 42
+**7) Full names and explanations of nouns and abbreviations**
+- **Feature Store**: A centralized repository that stores, manages, and serves features (input variables) for ML models, both for training and inference.
+- **Offline Store**: A storage system for historical features used for batch training and backfilling.
+- **Online Store**: A low-latency storage system (e.g., Redis) for serving features in real-time inference.
+- **CDC**: Change Data Capture. A methodology for identifying and capturing changes made to data in a source database and making those changes available in a target database.
+- **SLA**: Service Level Agreement. A commitment between a service provider and a client regarding service quality.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### **Day 64: Stream Processing for AI Data (Kafka, Kinesis, Flink)**
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Stream processing architectures
+- Event-driven AI pipelines
+- Stateful stream processing and watermarking
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- Event ingestion rate: 100,000 events/second
+- Stream processing latency: P99 < 1 second
+- Throughput: 50,000 TPS for feature update streams
+- Data retention: Kafka topics retain data for 7 days
 
+**3) Core Architecture/Technical Component Design**
+- Event Broker: Apache Kafka or AWS Kinesis
+- Stream Processing Engine: Apache Flink or Spark Streaming
+- State Storage: RocksDB (embedded in Flink) or external KV stores
+- Sink: Feature store, data lake, or real-time model inference endpoint
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Kafka vs Kinesis**: Kafka is open-source, highly customizable, and runs on-prem or cloud; Kinesis is fully managed by AWS, easier to operate, but less flexible and vendor-locked.
+- **Flink vs Spark Streaming**: Flink is a native stream processing engine with true streaming (event-by-event) and low latency; Spark Streaming uses micro-batches (typically 1-5 seconds), which is simpler but has higher latency.
 
-# Day 43: Day 43: AI Infra System Design Topic 43
+**5) Trade-off analysis**
+- Kafka (self-managed) vs Kinesis (managed): Kafka requires operational overhead but offers control and cost predictability; Kinesis reduces ops but scales costs with volume.
+- Flink (stateful streaming) vs Spark (micro-batch): Flink provides exactly-once semantics and lower latency but has a steeper learning curve; Spark is easier to adopt for teams already using Spark for batch.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For real-time, low-latency AI features with complex state (e.g., user session aggregations), choose Kafka + Flink.
+- For AWS-native environments with managed services preference, choose Kinesis + Lambda or Kinesis Data Analytics.
+- For teams with existing Spark ecosystems and micro-batch is acceptable, choose Spark Streaming.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of nouns and abbreviations**
+- **Kafka**: Apache Kafka. A distributed event streaming platform for high-performance data pipelines.
+- **Kinesis**: Amazon Kinesis. A managed service for real-time data streaming on AWS.
+- **Flink**: Apache Flink. A distributed stream processing framework.
+- **Spark Streaming**: The streaming processing component of Apache Spark, using micro-batches.
+- **Watermarking**: A mechanism in stream processing to handle late-arriving events by defining a threshold of expected event time progression.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### **Day 65: Data Quality, Monitoring, and Anomaly Detection in Pipelines**
 
+**1) Topic and Core Examination Areas**
+- Data quality checks and validation
+- Pipeline monitoring and alerting
+- Anomaly detection in data streams
 
----
+**2) Requirement Clarification and Metric Definitions**
+- Data quality SLA: 99.9% of records must pass validation
+- Monitoring latency: Alerts triggered within 1 minute of data quality degradation
+- Anomaly detection latency: P99 < 30 seconds for stream anomalies
 
-# Day 44: Day 44: AI Infra System Design Topic 44
+**3) Core Architecture/Technical Component Design**
+- Validation Layer: Great Expectations or dbt tests
+- Monitoring Layer: Prometheus + Grafana for pipeline metrics; Datadog for end-to-end observability
+- Anomaly Detection: Isolation Forest, autoencoders, or statistical methods (Z-score) on data distributions
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Great Expectations vs dbt tests**: Great Expectations is a dedicated data validation framework with rich assertions and data documentation; dbt tests are SQL-based checks integrated into the transformation layer, simpler for SQL-centric teams.
+- **Anomaly Detection Methods**: Statistical (Z-score, IQR) is fast and interpretable but assumes normal distribution; ML-based (Isolation Forest, Autoencoders) handles high-dimensional data but requires training and compute.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- Great Expectations: Comprehensive, generates data docs, but adds overhead to pipeline execution.
+- dbt tests: Lightweight, SQL-based, fits into transformation; but less rich in validation types and documentation.
+- Statistical vs ML anomaly detection: Statistical is fast and explainable; ML is more accurate for complex patterns but requires maintenance and compute.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For SQL-centric teams doing transformations, use dbt tests for data quality.
+- For comprehensive data validation and documentation, use Great Expectations.
+- For simple, real-time stream anomaly detection, use statistical methods; for complex, high-dimensional data, use ML-based anomaly detection.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of nouns and abbreviations**
+- **Great Expectations**: An open-source Python library for data validation and documentation.
+- **dbt**: data build tool. A transformation tool that enables analysts to write, test, and deploy SQL code.
+- **Z-score**: A statistical measurement describing a value's relationship to the mean of a group of values.
+- **Isolation Forest**: An anomaly detection algorithm that isolates anomalies instead of profiling normal data points.
+- **IQR**: Interquartile Range. A measure of statistical dispersion.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### **Day 66: RAG Architecture Overview and Core Components**
 
-# Day 45: Day 45: AI Infra System Design Topic 45
+**1) Topic and Core Examination Areas**
+- RAG (Retrieval-Augmented Generation) system architecture
+- Core components: indexer, retriever, generator, evaluator
+- End-to-end RAG pipeline design
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Document corpus size: 1 million documents, total 500 GB
+- Embedding model throughput: 1,000 documents/second for indexing
+- Retrieval QPS: 5,000 QPS for user queries
+- Retrieval latency: P99 < 100 ms
+- Generation latency: TTFT (Time to First Token) < 500 ms, TP99 generation latency < 3 seconds
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- Ingestion/Indexing: Document parsing, chunking, embedding generation, vector storage
+- Retrieval: Vector search engine, keyword search, reranking
+- Generation: LLM inference service (vLLM, TensorRT-LLM)
+- Orchestration: LangChain, LlamaIndex, or custom orchestrator
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Vector Databases vs In-Memory Search**: Vector DBs (Milvus, Pinecone, Qdrant) offer distributed scaling, persistence, and advanced indexing (HNSW). In-memory search (FAISS) is fast and free but requires manual scaling and persistence management.
+- **Orchestration Frameworks**: LangChain offers a comprehensive ecosystem with many integrations but can be complex; LlamaIndex is optimized for data indexing and RAG-specific workflows, often simpler for pure RAG use cases.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- Vector DB vs FAISS: Vector DBs provide production-ready features (replication, backup, scaling) but incur cost and operational complexity; FAISS is lightweight and fast but requires custom infrastructure for production scaling.
+- LangChain vs LlamaIndex: LangChain is general-purpose agent framework; LlamaIndex is focused on data ingestion and RAG retrieval optimization.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For production RAG with distributed data and high QPS, choose a managed or self-hosted Vector DB (Pinecone, Milvus, Qdrant).
+- For pure RAG data indexing and retrieval optimization, choose LlamaIndex.
+- For complex agentic workflows beyond RAG, choose LangChain.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **RAG**: Retrieval-Augmented Generation. A technique that enhances LLM responses by retrieving relevant context from an external knowledge base.
+- **TTFT**: Time to First Token. The latency from sending a prompt to receiving the first token of the response.
+- **TP99**: 99th percentile latency. 99% of requests complete within this time.
+- **HNSW**: Hierarchical Navigable Small World. A graph-based algorithm for approximate nearest neighbor search.
+- **FAISS**: Facebook AI Similarity Search. A library for efficient similarity search and clustering of dense vectors.
+- **LLM**: Large Language Model.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 46: Day 46: AI Infra System Design Topic 46
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 67: Document Chunking Strategies and Embedding Models**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Document parsing and chunking strategies (fixed-size, semantic, recursive)
+- Embedding models selection and optimization
+- Chunk metadata and overlap
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- Document types: PDFs, Markdown, HTML, Word docs
+- Chunk size: 500-1,000 tokens per chunk
+- Chunk overlap: 10-20% of chunk size
+- Embedding model dimension: 768 or 1024 dimensions
+- Embedding API cost: ~$0.1 per 1M tokens
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- Parsing Layer: pdfplumber, PyPDF, BeautifulSoup, or LlamaParse
+- Chunking Layer: RecursiveCharacterTextSplitter, SemanticChunker
+- Embedding Layer: OpenAI text-embedding-3-small, Cohere embed-english-v3, or open-source models (e.g., BGE-m3)
+- Metadata Injection: Document source, section headers, timestamps
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Fixed-size vs Semantic Chunking**: Fixed-size (e.g., RecursiveCharacterTextSplitter) splits by delimiters (newlines, periods) and is fast but may break semantic context. Semantic chunking uses embeddings or NLP to split at logical boundaries, preserving context but requiring more compute.
+- **Embedding Models**: OpenAI/Cohere models offer high accuracy and ease of use but are SaaS and cost per token. Open-source models (BGE, Sentence-Transformers) can be self-hosted, offering cost control at scale but requiring inference infrastructure.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- Fixed-size chunking: Fast, simple, but may cut sentences or lose context.
+- Semantic chunking: Preserves meaning, better retrieval quality, but slower and more complex to implement.
+- SaaS vs Self-hosted embeddings: SaaS is easy and accurate but scales costly; self-hosted is cost-effective at high volume but requires GPU/CPU infrastructure and maintenance.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For general documents with mixed formats, use RecursiveCharacterTextSplitter with 500-1000 token size and 10-20% overlap.
+- For complex documents (reports, papers) where context is critical, use semantic chunking or LLM-based chunking.
+- For low budget and high volume, self-host open-source embeddings (BGE-m3); for highest accuracy and simplest ops, use SaaS embeddings (OpenAI, Cohere).
 
+**7) Full names and explanations of nouns and abbreviations**
+- **Token**: A piece of text (word, subword, or character) that an LLM processes.
+- **Embedding**: A dense vector representation of text that captures semantic meaning.
+- **BGE-m3**: BAAI General Embedding - multilingual, multi-functionality. An open-source embedding model.
 
 ---
 
-# Day 47: Day 47: AI Infra System Design Topic 47
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### **Day 68: Vector Databases and Similarity Search (FAISS, Milvus, Pinecone, Qdrant)**
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Vector database architecture and indexing algorithms
+- Similarity search metrics (Cosine similarity, Euclidean distance)
+- Scalability and persistence of vector stores
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- Vector corpus size: 100 million vectors, each 1024 dimensions
+- Index build time: < 2 hours for 100M vectors
+- Search latency: P99 < 50 ms for top-K=10 retrieval
+- Throughput: 10,000 QPS for similarity search
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- Indexing Algorithm: HNSW, IVF-PQ (Inverted File with Product Quantization)
+- Vector DB Options: Milvus (open-source, scalable), Pinecone (managed), Qdrant (open-source/managed), Weaviate
+- Filter Support: Metadata filtering (e.g., date, document type) combined with vector search
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **HNSW vs IVF-PQ**: HNSW provides high recall and low latency but consumes more memory and is slower to build. IVF-PQ quantizes vectors, reducing memory and build time, but may have lower recall.
+- **Milvus vs Pinecone vs Qdrant**: Milvus is open-source, highly scalable, and supports complex metadata filtering; Pinecone is fully managed, easy to start, but less customizable and can be expensive at scale; Qdrant offers a good balance of open-source and managed, with efficient filtering.
 
+**5) Trade-off analysis**
+- HNSW: High accuracy and speed, but high memory usage and build time.
+- IVF-PQ: Lower memory and faster indexing, but potential recall degradation.
+- Managed (Pinecone) vs Self-hosted (Milvus, Qdrant): Managed reduces ops but limits control and can incur high costs; self-hosted offers control and cost predictability but requires engineering resources.
 
----
+**6) How to determine the optimal solution**
+- For highest accuracy and latency with sufficient memory, choose HNSW indexing.
+- For large-scale (100M+ vectors) with cost/memory constraints, consider IVF-PQ or HNSW with quantization.
+- For managed ease-of-use, choose Pinecone; for open-source flexibility and metadata filtering, choose Milvus or Qdrant.
 
-# Day 48: Day 48: AI Infra System Design Topic 48
+**7) Full names and explanations of nouns and abbreviations**
+- **Cosine Similarity**: A measure of similarity between two non-zero vectors of an inner product space that measures the cosine of the angle between them.
+- **Euclidean Distance**: The straight-line distance between two points in Euclidean space.
+- **IVF-PQ**: Inverted File with Product Quantization. A two-stage indexing method that first clusters vectors (IVF) and then compresses them (PQ).
+- **Milvus**: An open-source vector database built for scale.
+- **Pinecone**: A managed vector database service.
+- **Qdrant**: A vector search engine and vector database.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### **Day 69: Advanced Retrieval: Hybrid Search, Reranking, and Query Expansion**
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Hybrid search (vector + keyword/lexical search)
+- Reranking models and two-stage retrieval
+- Query expansion and transformation
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- Retrieval recall target: Top-5 recall > 85%
+- Reranking latency: P99 < 200 ms for reranking top-50 candidates
+- Hybrid search QPS: 5,000 QPS
+- Precision@K: Precision at K=5 should be > 70%
 
+**3) Core Architecture/Technical Component Design**
+- First-stage retrieval: Vector search + Keyword search (BM25) combined via weighted scoring or Reciprocal Rank Fusion (RRF)
+- Reranking stage: Cross-encoder models (e.g., Cross-Encoder NLLB, RankLLM, Cohere Rerank) to score top-K candidates
+- Query Expansion: Use LLM to expand query with synonyms, or use HyDE (Hypothetical Document Embeddings)
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Vector vs Keyword Search**: Vector search captures semantic similarity but may miss exact keyword matches. Keyword search (BM25) excels at exact term matching but fails on synonyms or semantic variation. Hybrid search combines both.
+- **Cross-encoder vs Bi-encoder Reranking**: Bi-encoders encode query and document separately (fast, used in first-stage). Cross-encoders encode query+document together (accurate but slower, used for reranking top-K).
 
-# Day 49: Day 49: AI Infra System Design Topic 49
+**5) Trade-off analysis**
+- Hybrid Search: Improves recall and precision but adds complexity and compute (maintaining keyword index like Elasticsearch).
+- Reranking: Significantly improves final answer quality but adds latency (200-500 ms per query).
+- Query Expansion: Can improve retrieval for vague queries but may introduce noise or hallucinated terms.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For general RAG systems, implement hybrid search (vector + BM25) with RRF.
+- If answer quality is critical and latency budget allows (>500 ms total retrieval), add a cross-encoder reranking stage for top-50 candidates.
+- For user queries that are short or ambiguous, use query expansion or HyDE.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of nouns and abbreviations**
+- **BM25**: Best Matching 25. A ranking function used by search engines to estimate the relevance of documents to a given search query.
+- **RRF**: Reciprocal Rank Fusion. A method to combine results from multiple search strategies by fusing their ranked lists.
+- **HyDE**: Hypothetical Document Embeddings. A query expansion technique that generates a hypothetical document for a query and uses its embedding for search.
+- **Precision@K**: The fraction of relevant items among the top K retrieved items.
+- **Recall**: The fraction of relevant items that are retrieved among all relevant items in the corpus.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### **Day 70: RAG Evaluation Metrics and Frameworks (RAGAS, TruLens, LLM-as-a-Judge)**
 
+**1) Topic and Core Examination Areas**
+- RAG system evaluation metrics (context precision, answer relevance, faithfulness)
+- Evaluation frameworks and tools
+- LLM-as-a-Judge and human evaluation
 
----
+**2) Requirement Clarification and Metric Definitions**
+- Evaluation dataset size: 500 question-context-answer triplets
+- Target metrics: Faithfulness > 0.85, Answer relevancy > 0.80, Context precision > 0.75
+- Evaluation throughput: 100 evaluations/minute via LLM-as-a-Judge
 
-# Day 50: Day 50: AI Infra System Design Topic 50
+**3) Core Architecture/Technical Component Design**
+- Evaluation Framework: RAGAS (RAG Assessment), TruLens, or LangSmith
+- Metrics Computation: Context precision, context recall, faithfulness, answer relevancy
+- LLM-as-a-Judge: Use a strong LLM (e.g., GPT-4, Claude 3) to score generations based on rubrics
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **RAGAS vs TruLens vs LangSmith**: RAGAS is specialized for RAG metrics (faithfulness, context precision) and open-source. TruLens focuses on LLM app observability and feedback loops. LangSmith is LangChain's platform for tracing, testing, and evaluating pipelines.
+- **LLM-as-a-Judge vs Human Evaluation**: LLM-as-a-Judge is fast, scalable, and cost-effective but may have biases or inconsistencies. Human evaluation is accurate and nuanced but slow and expensive.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- RAGAS: Comprehensive RAG-specific metrics, but requires ground truth contexts or answers.
+- LLM-as-a-Judge: Scalable and automated, but depends on the judge model's capability and may hallucinate scores.
+- Automated vs Human evaluation: Automated is fast and cheap; human is gold-standard but not scalable for continuous evaluation.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For RAG-specific metric evaluation (faithfulness, context precision), use RAGAS.
+- For end-to-end LLM app observability and A/B testing, use LangSmith or TruLens.
+- For production evaluation, combine LLM-as-a-Judge for scale with periodic human evaluation for ground truth validation.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of nouns and abbreviations**
+- **RAGAS**: RAG Assessment. An open-source framework to evaluate RAG pipelines.
+- **Faithfulness**: A RAG metric measuring whether the generated answer is grounded in the retrieved context.
+- **Answer Relevancy**: A metric measuring how well the generated answer addresses the user's query.
+- **Context Precision**: A metric measuring the precision of the retrieved context in containing relevant information.
+- **LLM-as-a-Judge**: Using a Large Language Model to evaluate or score the outputs of another LLM or RAG system.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### **Day 71: Agentic RAG and Dynamic Retrieval (ReAct, Tool Use)**
 
-# Day 51: Day 51: AI Infra System Design Topic 51
+**1) Topic and Core Examination Areas**
+- Agentic RAG architectures
+- ReAct (Reasoning and Acting) pattern
+- Dynamic retrieval and tool use
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Agent decision latency: P99 < 2 seconds per reasoning step
+- Number of tool calls per query: Average 2-3, max 5
+- Success rate of tool use: > 90%
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- Agent Framework: LangChain Agents, LlamaIndex Agents, or AutoGen
+- Reasoning Loop: ReAct pattern (Thought, Action, Observation)
+- Tools: Search API, Vector DB retriever, SQL database, custom APIs
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **ReAct vs Prompt-only RAG**: ReAct enables the LLM to reason and take actions (tool calls) iteratively, suitable for complex queries. Prompt-only RAG is a single retrieval + generation step, simpler but less capable for multi-step reasoning.
+- **LangChain Agents vs LlamaIndex Agents**: LangChain agents are highly flexible with many tool integrations but can be verbose. LlamaIndex agents are optimized for data-centric RAG and tool use over datasets.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- Agentic RAG: More capable for complex, multi-step queries, but introduces latency, potential for infinite loops, and higher cost (more LLM calls).
+- ReAct: Structured reasoning, but requires careful tool design and error handling.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For simple, document-based Q&A, use standard RAG (single retrieval + generation).
+- For queries requiring external data, multi-step reasoning, or tool use, implement Agentic RAG with ReAct pattern.
+- Set max tool calls and timeout to prevent infinite loops and control costs.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **ReAct**: Reasoning and Acting. A prompting strategy that combines reasoning (chain-of-thought) and action (tool use) for LLM agents.
+- **Agentic RAG**: RAG systems augmented with agentic capabilities (planning, tool use, reflection).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 52: Day 52: AI Infra System Design Topic 52
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 72: GraphRAG and Knowledge Graphs in RAG**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Knowledge Graph construction and integration
+- GraphRAG architecture
+- Entity and relationship extraction
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- Graph size: 100,000 entities, 500,000 relationships
+- Graph construction latency: < 24 hours for 10 GB of documents
+- Graph search latency: P99 < 100 ms for entity traversal
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- Extraction Layer: LLM-based entity and relation extraction, or NLP tools (spaCy, NLTK)
+- Graph Storage: Neo4j, NebulaGraph, or Amazon Neptune
+- GraphRAG Retrieval: Community summaries, entity-based search, hybrid graph-vector search
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Knowledge Graph vs Vector DB**: Vector DBs excel at semantic similarity over unstructured text. Knowledge Graphs excel at structured relationships, entity resolution, and multi-hop reasoning. GraphRAG combines both.
+- **Graph Construction Methods**: LLM-based extraction is accurate but expensive and slow; rule-based/NLP extraction is fast and cheap but less accurate for complex relationships.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- GraphRAG: Powerful for complex, multi-hop queries and global understanding, but graph construction is costly and maintenance is complex.
+- LLM-based vs NLP extraction: LLM-based yields richer semantics but higher cost and latency; NLP/rule-based is faster but may miss nuanced relationships.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For documents with rich entity relationships (e.g., medical, legal, corporate reports), consider GraphRAG.
+- For general document Q&A, standard vector-based RAG is sufficient and more cost-effective.
+- Use LLM-based extraction for high-value, low-volume knowledge graphs; use NLP/rule-based for large-scale, lower-accuracy needs.
 
+**7) Full names and explanations of nouns and abbreviations**
+- **GraphRAG**: Graph-based Retrieval-Augmented Generation. A RAG approach that uses knowledge graphs to improve retrieval and reasoning.
+- **Knowledge Graph**: A graph database that stores entities, attributes, and relationships in a structured format.
+- **Neo4j**: A popular graph database management system.
+- **Multi-hop reasoning**: Reasoning that requires traversing multiple relationships or steps to arrive at an answer.
 
 ---
 
-# Day 53: Day 53: AI Infra System Design Topic 53
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### **Day 73: RAG System Latency Optimization and Caching Strategies**
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Latency bottlenecks in RAG pipelines
+- Caching strategies for embeddings, retrieval results, and LLM generations
+- Asynchronous processing and parallelization
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- End-to-end RAG latency target: TTFT < 500 ms, total latency < 3 seconds
+- Cache hit rate target: > 60% for embedding and retrieval cache
+- Cache TTL: Embedding cache TTL 7 days; Query result cache TTL 1 hour
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- Embedding Cache: Redis or Memcached for storing text->vector mappings
+- Retrieval Cache: Store top-K retrieved chunks for similar queries (fuzzy match or hash)
+- Generation Cache: Cache LLM outputs for identical or near-identical prompts (using n-gram or embedding similarity)
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Exact vs Fuzzy Caching**: Exact caching matches query hashes or exact text; fuzzy caching uses embedding similarity to match similar queries. Fuzzy cache has higher hit rate but requires similarity computation.
+- **Asynchronous Indexing**: Document ingestion and embedding generation can be done asynchronously to not block user queries.
 
+**5) Trade-off analysis**
+- Caching: Reduces latency and cost (embedding API, LLM calls) but risks serving stale or incorrect information if TTL is too long or cache invalidation is flawed.
+- Exact vs Fuzzy cache: Exact is simple and fast; fuzzy is more accurate for varied queries but adds compute overhead.
 
----
+**6) How to determine the optimal solution**
+- Implement embedding cache for frequently indexed documents.
+- Implement query result cache for common user questions (exact or fuzzy match with short TTL).
+- Ensure cache invalidation logic is tied to document updates or version changes.
 
-# Day 54: Day 54: AI Infra System Design Topic 54
+**7) Full names and explanations of nouns and abbreviations**
+- **TTL**: Time To Live. The duration after which a cache entry expires.
+- **Memcached**: A distributed memory object caching system.
+- **Redis**: An in-memory data structure store, used as a database, cache, and message broker.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### **Day 74: Multi-modal RAG (Images, Videos, Documents, PDFs)**
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Multi-modal document parsing (PDFs with images, tables, charts)
+- Multi-modal embedding and retrieval (CLIP, image embeddings)
+- Multi-modal LLM generation (GPT-4V, Claude 3, LLaVA)
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- Document types: PDFs with images, tables, OCR text
+- Image embedding dimension: 512 or 768 (CLIP embeddings)
+- Multi-modal retrieval QPS: 2,000 QPS
+- Multi-modal LLM inference latency: TTFT < 1 second, total < 5 seconds
 
+**3) Core Architecture/Technical Component Design**
+- Parsing Layer: PDF extraction with layout analysis (LayoutLM, DocParse), OCR for images (Tesseract, AWS Textract)
+- Multi-modal Embedding: CLIP (Contrastive Language-Image Pre-training) for image-text pairs, or dedicated image embeddings
+- Storage: Vector DB for text and image embeddings, with metadata linking images to text chunks
+- Generator: Multi-modal LLM (GPT-4V, Claude 3 Sonnet/Opus, LLaVA)
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **OCR vs Layout-aware parsing**: OCR extracts text from images but may lose structure. Layout-aware models (LayoutLM) preserve document structure (headers, tables, columns), improving chunking quality.
+- **CLIP vs Dedicated Image Embeddings**: CLIP provides joint image-text embeddings, enabling cross-modal search. Dedicated image embeddings (e.g., ResNet features) are optimized for visual similarity but not cross-modal semantic search.
 
-# Day 55: Day 55: AI Infra System Design Topic 55
+**5) Trade-off analysis**
+- OCR vs Layout-aware: Layout-aware is more accurate for structured documents but requires more compute and specialized models.
+- Multi-modal LLMs: GPT-4V/Claude 3 offer high quality but are SaaS and expensive; open-source multi-modal models (LLaVA) are cheaper to run but may have lower accuracy or latency.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For PDFs with complex layouts and tables, use layout-aware parsing + OCR.
+- For cross-modal search (image-text), use CLIP embeddings.
+- For high-quality multi-modal generation, use GPT-4V or Claude 3; for cost-effective self-hosted, consider LLaVA or Qwen-VL.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of nouns and abbreviations**
+- **OCR**: Optical Character Recognition. Technology that converts images of text into machine-encoded text.
+- **CLIP**: Contrastive Language-Image Pre-training. A model that learns joint representations of images and text.
+- **LLaVA**: Large Language-and-Vision Assistant. An open-source multi-modal LLM.
+- **GPT-4V**: GPT-4 with Vision capabilities.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### **Day 75: RAG Security, Privacy, PII Redaction, and Data Governance**
 
+**1) Topic and Core Examination Areas**
+- Data security and access control in RAG
+- PII (Personally Identifiable Information) redaction
+- Data governance and compliance (GDPR, HIPAA)
 
----
+**2) Requirement Clarification and Metric Definitions**
+- PII detection accuracy: > 99% for sensitive data types (email, SSN, credit card)
+- Access control latency: < 10 ms per document access check
+- Compliance: Must support GDPR right-to-be-forgotten (data deletion)
 
-# Day 56: Day 56: AI Infra System Design Topic 56
+**3) Core Architecture/Technical Component Design**
+- PII Redaction Layer: Presidio (Microsoft), spaCy NER, or commercial PII detectors before indexing
+- Access Control: Row-level security, document-level permissions integrated into retrieval filter
+- Audit Logging: Log all RAG queries, retrievals, and generations for compliance
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Presidio vs Custom NER**: Presidio is a comprehensive PII redaction framework with many detectors and redaction strategies. Custom NER models are tailored to specific domains but require training and maintenance.
+- **Access Control Integration**: Implement access control at the retrieval layer by filtering vector search results based on user permissions (metadata filters).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- PII Redaction: Protects privacy but may remove useful context or introduce errors if over-redacting.
+- Metadata-based access control: Efficient and integrates with vector DB filters, but requires consistent metadata tagging during ingestion.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Use Presidio or similar PII redaction tools before indexing sensitive documents.
+- Implement document-level access control via metadata filters in the vector DB.
+- Ensure audit logging is enabled for all RAG interactions to support compliance audits.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of nouns and abbreviations**
+- **PII**: Personally Identifiable Information. Data that can be used to identify a specific individual.
+- **GDPR**: General Data Protection Regulation. EU regulation on data protection and privacy.
+- **HIPAA**: Health Insurance Portability and Accountability Act. US regulation for healthcare data privacy.
+- **Presidio**: An open-source PII redaction and analysis framework by Microsoft.
+- **NER**: Named Entity Recognition. NLP task for identifying entities like persons, organizations, locations in text.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### **Day 76: Auto-Scaling Fundamentals for AI Serving Systems**
 
-# Day 57: Day 57: AI Infra System Design Topic 57
+**1) Topic and Core Examination Areas**
+- Auto-scaling concepts and triggers (CPU, GPU, memory, custom metrics)
+- Scaling up vs scaling out
+- Scaling AI model serving workloads
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Current inference QPS: 2,000 QPS, peaking at 10,000 QPS
+- GPU utilization target: 60-80% for cost-effective scaling
+- Scaling trigger: Scale up when GPU utilization > 75% for 5 minutes
+- Scale-in cooldown: 10 minutes to prevent flapping
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- Metrics Collection: Prometheus, GPU metrics (nvml, DCGM)
+- Auto-Scaler: Kubernetes HPA (Horizontal Pod Autoscaler), custom scalers for GPU metrics
+- Model Serving: vLLM, TensorRT-LLM, or KServe
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **CPU-based HPA vs GPU-based HPA**: CPU metrics are standard but may not reflect AI workload pressure (a model can be GPU-bound while CPU is idle). GPU-based scaling (using DCGM or custom metrics) is more accurate for LLM serving.
+- **Scaling Pods vs Scaling Nodes**: Scaling pods (horizontal scaling of model instances) is faster but limited by available nodes. Scaling nodes (adding GPU nodes) takes longer (provisioning time) but increases capacity.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- Pod scaling: Fast, but may hit node capacity limits or cause resource fragmentation.
+- Node scaling: Increases capacity but has provisioning latency (minutes for GPU nodes), risking request spikes during scale-up.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use pod-level auto-scaling (HPA) for rapid response to QPS changes within existing node capacity.
+- Use node-level auto-scaling (Cluster Autoscaler / Karpenter) to handle sustained high load or new model deployments.
+- Combine both: HPA for pod scaling, triggered by GPU utilization or queue length.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **HPA**: Horizontal Pod Autoscaler. A Kubernetes component that automatically scales the number of pod replicas.
+- **GPU**: Graphics Processing Unit. Originally for graphics, now widely used for AI/ML compute.
+- **DCGM**: Data Center GPU Manager. NVIDIA's tool for monitoring and managing GPU metrics.
+- **nvml**: NVIDIA Management Library. API for monitoring and managing NVIDIA GPUs.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 58: Day 58: AI Infra System Design Topic 58
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 77: Kubernetes Auto-Scaling (HPA, VPA, KEDA, CRDs)**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Kubernetes scaling mechanisms: HPA, VPA, KEDA
+- Custom Resource Definitions (CRDs) for AI workloads
+- Metric-based auto-scaling
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- Pod scaling range: 2 to 20 replicas
+- VPA recommendations: CPU 4 cores, Memory 16 GB, GPU 1 per pod
+- Scaling latency target: < 30 seconds from trigger to new pod ready
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- HPA: Scales based on CPU, memory, or custom metrics (via Custom Metrics API)
+- VPA: Vertical Pod Autoscaler, recommends or applies resource requests/limits
+- KEDA: Kubernetes Event-driven Autoscaling, scales based on external events (Kafka queue length, Prometheus metrics)
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **HPA vs KEDA**: HPA is built into Kubernetes and scales based on resource metrics or custom metrics. KEDA is an operator that scales based on event sources (message queues, HTTP concurrency) and is more suitable for bursty AI workloads.
+- **VPA vs Manual Resource Tuning**: VPA automatically recommends or sets resource requests, but can cause pod evictions and restarts. Manual tuning requires expertise but offers stability.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- HPA: Standard, widely supported, but may not natively support GPU or custom AI metrics without setup.
+- KEDA: Excellent for event-driven scaling (e.g., queue length), but requires additional operator and configuration.
+- VPA: Optimizes resource usage but can cause instability due to pod rescheduling.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For standard resource-based scaling (CPU/memory), use HPA.
+- For event-driven or custom metric scaling (GPU utilization, queue length), use KEDA.
+- For resource optimization over time, use VPA in recommendation mode, not auto-apply, to avoid disruptions.
 
+**7) Full names and explanations of nouns and abbreviations**
+- **VPA**: Vertical Pod Autoscaler. A Kubernetes tool that adjusts the CPU and memory resources of pods.
+- **KEDA**: Kubernetes Event-driven Autoscaling. An open-source project for event-driven scale.
+- **CRD**: Custom Resource Definition. A way to extend the Kubernetes API with custom resources.
+- **Custom Metrics API**: Kubernetes API for exposing custom metrics for HPA.
 
 ---
-
-# Day 59: Day 59: AI Infra System Design Topic 59
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+================================================================================
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### **Day 78: GPU Auto-Scaling and Node Provisioning (Cluster Autoscaler, Karpenter)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**1) Topic and Core Examination Areas**
+- GPU node provisioning and auto-scaling
+- Cluster Autoscaler vs Karpenter
+- Spot instances and GPU cost optimization
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**2) Requirement Clarification and Metric Definitions**
+- GPU node types: NVIDIA A10G, A100, H100
+- Provisioning latency target: < 3 minutes for new GPU node
+- Spot instance usage target: 70% of non-critical workloads
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**3) Core Architecture/Technical Component Design**
+- Node Auto-Scaler: Cluster Autoscaler or Karpenter
+- Instance Types: Managed GPU instances (AWS EC2 P3/P4/G5, GCP A2, Azure NDm)
+- Spot Integration: Spot fleet or Karpenter spot strategies
 
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Cluster Autoscaler vs Karpenter**: Cluster Autoscaler is the native Kubernetes auto-scaler, but is slower and less flexible. Karpenter is a newer, node-level auto-scaler that provisions nodes in seconds based on pod requirements, supporting spot instances and diverse instance types.
+- **On-Demand vs Spot GPU instances**: Spot instances are 60-80% cheaper but can be reclaimed with short notice. On-demand is stable but expensive.
 
----
+**5) Trade-off analysis**
+- Cluster Autoscaler: Mature and stable, but slow provisioning (minutes) and less instance type flexibility.
+- Karpenter: Fast provisioning (seconds), intelligent instance selection, but requires setup and is less mature than CA.
+- Spot vs On-Demand: Spot saves cost but introduces interruption risk; on-demand is reliable but costly.
 
-# Day 60: Day 60: AI Infra System Design Topic 60
+**6) How to determine the optimal solution**
+- For fast, intelligent GPU node provisioning, choose Karpenter.
+- For non-critical, fault-tolerant AI workloads (e.g., batch embedding generation), use Spot instances.
+- For production model serving, use On-Demand or Spot with graceful degradation and retry logic.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**7) Full names and explanations of nouns and abbreviations**
+- **Cluster Autoscaler**: A Kubernetes component that adds or removes nodes from the cluster based on unschedulable pods.
+- **Karpenter**: An open-source node provisioner project for Kubernetes that provides fast, flexible node provisioning.
+- **Spot Instances**: Unused compute capacity available at a discounted price, which can be reclaimed by the cloud provider.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+---
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+================================================================================
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### **Day 79: Model Serving Auto-Scaling (vLLM, TensorRT-LLM, KServe, TorchServe)**
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**1) Topic and Core Examination Areas**
+- Model serving frameworks and their scaling characteristics
+- Continuous batching and request queue management
+- Multi-model serving and tenant isolation
 
+**2) Requirement Clarification and Metric Definitions**
+- Model serving QPS: 5,000 QPS per model endpoint
+- GPU memory (HBM) per A100: 80 GB
+- Throughput: 1,000 tokens/second/gpu
+- P99 latency: < 2 seconds for end-to-end generation
 
----
+**3) Core Architecture/Technical Component Design**
+- Serving Framework: vLLM (PagedAttention, continuous batching), TensorRT-LLM (optimized CUDA kernels), KServe (Kubernetes-native serving)
+- Queue Management: Request queue with timeout and priority
+- Scaling: Pod-level scaling of serving instances
 
-## DAYS-61-90
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **vLLM vs TensorRT-LLM**: vLLM is framework-agnostic, supports continuous batching via PagedAttention, and is easy to deploy. TensorRT-LLM is NVIDIA's optimized framework, offering higher throughput but requiring model conversion and is GPU-specific.
+- **Static Batching vs Continuous Batching**: Static batching groups requests into fixed-size batches and processes them together; continuous batching (or request-level batching) dynamically adds new requests to a batch as older requests finish, maximizing GPU utilization.
 
-# Day 61: Day 61: AI Infra System Design Topic 61
+**5) Trade-off analysis**
+- vLLM: Flexible, open-source, supports many models; but may have lower peak throughput than compiled frameworks.
+- TensorRT-LLM: Highest performance for NVIDIA GPUs; but requires conversion, is less flexible, and ties to NVIDIA ecosystem.
+- Static vs Continuous Batching: Static is simpler but wastes GPU cycles when batches are incomplete; continuous batching maximizes throughput but is complex to implement.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+**6) How to determine the optimal solution**
+- For flexibility and ease of deployment with many models, choose vLLM.
+- For maximum throughput on NVIDIA GPUs with a specific model, choose TensorRT-LLM.
+- Ensure continuous batching is enabled for high-QPS workloads to maximize HBM and compute utilization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+**7) Full names and explanations of nouns and abbreviations**
+- **vLLM**: A fast and easy-to-use library for LLM inference and serving.
+- **TensorRT-LLM**: NVIDIA's library for high-performance LLM inference on GPUs.
+- **KServe**: Kubernetes-native serving framework for machine learning models.
+- **PagedAttention**: A memory management technique used by vLLM to efficiently manage KV Cache by paginating it like an OS.
+- **HBM**: High Bandwidth Memory. A type of computer memory used in GPUs.
+- **KV Cache**: Key-Value Cache. The cached attention keys and values from previous tokens to avoid recomputation.
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
+### **Day 80: Request Queuing, Backpressure, and Rate Limiting in AI Systems**
 
+**1) Topic and Core Examination Areas**
+- Request queuing strategies for AI serving
+- Backpressure mechanisms
+- Rate limiting and quota management
 
----
+**2) Requirement Clarification and Metric Definitions**
+- Queue capacity: 10,000 pending requests
+- Queue timeout: 30 seconds
+- Rate limit: 100 requests/second per tenant
+- Backpressure trigger: When queue length > 80% of capacity
 
-# Day 62: Day 62: AI Infra System Design Topic 62
+**3) Core Architecture/Technical Component Design**
+- Queue Layer: Redis queue, Kafka, or in-memory queue (in serving framework)
+- Rate Limiter: Token bucket or leaky bucket algorithm, implemented in API gateway or serving layer
+- Backpressure: Reject new requests or return 429 Too Many Requests when queue is full
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Token Bucket vs Leaky Bucket**: Token bucket allows bursts up to a limit, then rates at a constant speed. Leaky bucket processes requests at a constant rate, smoothing out bursts.
+- **Queue in Gateway vs Queue in Serving**: Gateway queue (e.g., API gateway) provides a unified entry point and can rate-limit across models. Serving-level queue (e.g., vLLM's queue) is optimized for model-specific batching.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- Gateway queue: Centralized control, but adds latency and a single point of failure.
+- Serving queue: Lower latency, integrated with batching, but harder to enforce cross-model rate limits.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For multi-tenant AI platforms, implement rate limiting at the API gateway level.
+- For high-throughput single model serving, rely on the serving framework's internal queue and continuous batching.
+- Use backpressure (429 errors) to protect the system from overload.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of nouns and abbreviations**
+- **Backpressure**: A mechanism where a system signals to upstream components to slow down or stop sending data when it is overwhelmed.
+- **Rate Limiting**: Restricting the number of requests a user or tenant can make in a given time period.
+- **Token Bucket**: A rate limiting algorithm that allows bursts up to a bucket capacity, then limits to a refill rate.
+- **Leaky Bucket**: A rate limiting algorithm that processes requests at a constant rate, queuing excess requests.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### **Day 81: Load Balancing for AI Model Serving (L4 vs L7, AI-specific routing)**
 
-# Day 63: Day 63: AI Infra System Design Topic 63
+**1) Topic and Core Examination Areas**
+- Load balancing layers: L4 (Transport) vs L7 (Application)
+- AI-specific routing: model routing, tenant routing, latency-based routing
+- Service mesh and load balancer options
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Load balancer QPS handling: 50,000 QPS
+- L4 vs L7 latency overhead: L4 < 1 ms, L7 1-3 ms
+- Routing accuracy: > 99% for tenant-to-model routing
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- L4 Load Balancer: AWS ALB/NLB, HAProxy, MetalLB (Kubernetes)
+- L7 Load Balancer: API Gateway, Istio, Kong, Traefik
+- AI Routing: Route by model name, version, or tenant ID in the L7 layer
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **L4 vs L7 Load Balancing**: L4 balances based on IP and port (fast, low overhead) but cannot inspect HTTP headers or payload. L7 inspects HTTP requests, enabling routing by path, headers, or tenant ID, but adds latency.
+- **AI-Specific Routing**: In multi-model serving, L7 routing is essential to direct requests to the correct model endpoint or version (canary, A/B test).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- L4: Faster, simpler, but lacks content-based routing.
+- L7: Flexible routing (by model, tenant), but higher latency and complexity.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For simple, high-throughput single-model serving, L4 load balancing is sufficient.
+- For multi-model, multi-tenant, or A/B testing scenarios, use L7 load balancing with service mesh (Istio) or API gateway.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **L4 Load Balancing**: Layer 4 (Transport Layer) load balancing, using IP and port.
+- **L7 Load Balancing**: Layer 7 (Application Layer) load balancing, inspecting HTTP/HTTPS content.
+- **ALB/NLB**: Application Load Balancer / Network Load Balancer (AWS services).
+- **Istio**: An open-source service mesh for managing microservice traffic and policies.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 64: Day 64: AI Infra System Design Topic 64
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 82: Cost Optimization in AI Infra Auto-Scaling (Spot instances, right-sizing)**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- GPU cost optimization strategies
+- Right-sizing model serving workloads
+- Spot instance strategies for AI
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- GPU cost target: < $2 per 1M tokens generated
+- Right-sizing accuracy: GPU utilization 60-80%
+- Spot interruption rate target: < 5% for serving workloads (use on-demand for serving)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- Monitoring: Cost tracking via cloud provider tools or Kubecost
+- Right-sizing: Analyze GPU memory and compute utilization to select appropriate instance types (e.g., A10G vs A100)
+- Spot Integration: Use spot for batch jobs, embedding generation, or non-critical training
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Instance Right-Sizing**: Over-provisioned GPUs waste money; under-provisioned GPUs cause latency. Use profiling tools to determine optimal GPU type and memory for the model.
+- **Spot vs On-Demand for Serving**: Serving workloads require stability; spot interruptions can cause request failures. Use on-demand for serving, spot for offline batch tasks.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- Spot instances: 60-80% cost savings, but risk of interruption.
+- Right-sizing vs Over-provisioning: Right-sizing optimizes cost but requires continuous monitoring; over-provisioning ensures performance but wastes cost.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use on-demand GPU instances for production model serving to ensure stability.
+- Use spot instances for batch embedding, data processing, or training workloads that can tolerate interruptions.
+- Continuously profile and right-size model serving workloads to maintain 60-80% GPU utilization.
 
+**7) Full names and explanations of nouns and abbreviations**
+- **Kubecost**: A tool for monitoring and optimizing Kubernetes cluster costs.
+- **Right-sizing**: The practice of matching resource provision (CPU, GPU, memory) to actual workload requirements to optimize cost and performance.
 
 ---
 
-# Day 65: Day 65: AI Infra System Design Topic 65
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### **Day 83: Multi-Model Serving and Tenant Isolation**
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Multi-model serving architectures
+- Tenant isolation (data, compute, model)
+- Resource allocation and quotas
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- Number of models served: 50+ models on same cluster
+- Tenant isolation: Compute isolation via GPU assignment, data isolation via separate vector DBs
+- QPS per tenant: 1,000 QPS max
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- Multi-Model Serving: KServe, vLLM with multiple model instances, or model router
+- Tenant Routing: L7 load balancer routes by tenant ID to specific model endpoints
+- Resource Quotas: Kubernetes namespaces with resource limits per tenant
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Shared vs Isolated Serving**: Shared serving (multi-tenant on same GPUs) is cost-effective but requires careful isolation and QoS guarantees. Isolated serving (dedicated GPUs per tenant) is secure and performant but costly.
+- **Model Router**: A layer that routes incoming requests to the appropriate model instance based on tenant, model version, or priority.
 
+**5) Trade-off analysis**
+- Shared serving: High utilization, lower cost, but risk of noisy neighbor effects.
+- Isolated serving: Predictable performance and security, but lower utilization and higher cost.
 
----
+**6) How to determine the optimal solution**
+- For cost-sensitive, similar-workload tenants, use shared serving with QoS limits and monitoring.
+- For enterprise tenants with security or performance SLAs, use isolated serving with dedicated GPU nodes.
 
-# Day 66: Day 66: AI Infra System Design Topic 66
+**7) Full names and explanations of nouns and abbreviations**
+- **QoS**: Quality of Service. A mechanism to guarantee performance levels for different types of traffic or workloads.
+- **Noisy Neighbor**: A scenario where one tenant's workload negatively impacts the performance of another tenant on shared resources.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### **Day 84: Fault Tolerance and High Availability in AI Serving Systems**
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- High availability (HA) design for model serving
+- Fault tolerance and retry mechanisms
+- Multi-region and multi-zone deployment
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- Availability target: 99.99%
+- RTO (Recovery Time Objective): < 5 minutes
+- RPO (Recovery Point Objective): 0 for stateless serving; < 1 hour for model artifacts
 
+**3) Core Architecture/Technical Component Design**
+- Multi-Zone Deployment: Spread pods across availability zones
+- Health Checks: Liveness and readiness probes for serving pods
+- Failover: Automatic routing to healthy replicas or zones
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Stateless vs Stateful Serving**: LLM serving is mostly stateless (except KV Cache in memory). Statelessness enables easy scaling and failover. KV Cache is ephemeral and lost on pod restart, but this is acceptable as it only affects in-flight requests.
+- **Liveness vs Readiness Probes**: Liveness probe determines if the pod should be restarted. Readiness probe determines if the pod should receive traffic.
 
-# Day 67: Day 67: AI Infra System Design Topic 67
+**5) Trade-off analysis**
+- Multi-zone: Increases HA but adds cross-zone network latency and cost.
+- Stateless design: Simplifies scaling and failover, but in-flight KV Cache is lost on restart.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Deploy model serving pods across multiple availability zones for HA.
+- Use readiness and liveness probes to ensure only healthy pods receive traffic.
+- Accept KV Cache loss on restart as in-flight requests will be retried by clients or queue.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of nouns and abbreviations**
+- **HA**: High Availability. A system design that ensures a high level of operational performance.
+- **RTO**: Recovery Time Objective. The targeted duration of time within which a business process must be restored after a disaster.
+- **RPO**: Recovery Point Objective. The maximum targeted period in which data might be lost from an IT service due to a major incident.
+- **Liveness/Readiness Probes**: Kubernetes mechanisms to check if a container is running (liveness) or ready to serve traffic (readiness).
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### **Day 85: Canary Deployments, A/B Testing, and Shadow Deployments for Models**
 
+**1) Topic and Core Examination Areas**
+- Model deployment strategies
+- A/B testing for LLMs and RAG systems
+- Shadow testing and traffic splitting
 
----
+**2) Requirement Clarification and Metric Definitions**
+- Canary traffic percentage: Start with 5%, scale to 20%, then 100%
+- A/B test duration: 7 days minimum for statistical significance
+- Shadow traffic: 10% of production traffic routed to new model silently
 
-# Day 68: Day 68: AI Infra System Design Topic 68
+**3) Core Architecture/Technical Component Design**
+- Traffic Splitting: Istio, Kong, or API gateway for percentage-based routing
+- A/B Framework: LangSmith, custom analytics, or feature flags
+- Shadow Mode: Duplicate requests to new model, log outputs, but not return to user
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Canary vs A/B vs Shadow**: Canary releases gradually roll out a new version to users. A/B testing compares two versions metric-wise. Shadow routing sends traffic to a new model without affecting user experience, used for validation.
+- **Feature Flags**: Enable or disable model features or versions without deploying new code.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- Canary: Low risk, gradual rollout, but may take time to validate full performance.
+- Shadow: Safe validation, but does not measure real user impact since responses are not returned.
+- A/B Testing: Measures real impact, but requires statistical rigor and user segmentation.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For new model versions, start with shadow mode to validate outputs, then canary release with 5% traffic, and finally full rollout.
+- For comparing model A vs model B for business metrics, use A/B testing with feature flags.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of nouns and abbreviations**
+- **Canary Deployment**: Releasing a new version to a small subset of users before full rollout.
+- **Shadow Deployment**: Routing production traffic to a new system silently to test it without affecting users.
+- **Feature Flag**: A software development technique that allows features to be enabled or disabled without deploying new code.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### **Day 86: Observability and Monitoring for AI Systems (Prometheus, Grafana, OpenTelemetry, LangSmith)**
 
-# Day 69: Day 69: AI Infra System Design Topic 69
+**1) Topic and Core Examination Areas**
+- Metrics, logs, and traces for AI systems
+- LLM-specific observability
+- Alerting and dashboards
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- Metrics collection interval: 10 seconds
+- Trace sampling rate: 10% for LLM requests
+- Alert latency: < 1 minute for P99 latency degradation
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- Metrics: Prometheus for GPU, CPU, QPS, latency metrics
+- Traces: OpenTelemetry for distributed tracing of RAG pipelines
+- LLM Observability: LangSmith, LlamaIndex Observability, or Arize AI
+- Dashboards: Grafana for visualization
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Prometheus + Grafana vs Commercial APM**: Prometheus is open-source and flexible but requires setup and maintenance. Commercial APM (Datadog, Arize) offers out-of-the-box LLM metrics and RAG tracing but at higher cost.
+- **OpenTelemetry**: An open-standard for traces, metrics, and logs, enabling vendor-agnostic observability.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- Open-source (Prometheus/Grafana/OTel): Cost-effective, flexible, but requires engineering effort to set up and maintain.
+- Commercial LLM observability: Faster time-to-value, RAG-specific metrics, but vendor lock-in and higher cost.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For teams with strong SRE/observability engineering, use Prometheus + Grafana + OpenTelemetry.
+- For RAG-specific observability and LLM app debugging, integrate LangSmith or Arize AI.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of nouns and abbreviations**
+- **APM**: Application Performance Monitoring. Tools and practices to monitor and manage the performance of software applications.
+- **OpenTelemetry**: An open-source observability framework for traces, metrics, and logs.
+- **LangSmith**: LangChain's platform for LLM application observability and evaluation.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 70: Day 70: AI Infra System Design Topic 70
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### **Day 87: Metric-Driven Auto-Scaling for LLM Serving (TTFT, TPOT, P99 Latency, KV Cache utilization)**
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- LLM-specific metrics for auto-scaling
+- TTFT, TPOT (Time Per Output Token), P99 latency
+- KV Cache utilization and GPU memory scaling triggers
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- TTFT target: < 500 ms
+- TPOT target: < 50 ms/token
+- P99 latency target: < 3 seconds
+- KV Cache utilization threshold: 85% of HBM
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- Custom Metrics: Export TTFT, TPOT, KV Cache usage from vLLM/TensorRT-LLM to Prometheus
+- Auto-Scaler: KEDA or custom HPA triggered by TTFT or KV Cache utilization
+- Scaling policy: Scale out when TTFT > 500 ms or KV Cache > 85%
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **TTFT vs TPOT Scaling**: TTFT is sensitive to request arrival and initial processing; TPOT is sensitive to batch size and GPU compute. Scaling based on TTFT prevents latency spikes; scaling based on TPOT ensures throughput.
+- **KV Cache Utilization**: As KV Cache grows, GPU memory fills up, causing eviction or slowdown. Monitoring KV Cache HBM usage is a leading indicator for scaling.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- TTFT-based scaling: Responsive to user experience, but may trigger scaling for transient spikes.
+- KV Cache-based scaling: Accurate indicator of GPU memory pressure, but requires custom metrics export.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use TTFT and P99 latency as primary scaling triggers for user-facing LLM serving.
+- Use KV Cache utilization as a secondary trigger to prevent OOM or eviction issues.
 
+**7) Full names and explanations of nouns and abbreviations**
+- **TTFT**: Time to First Token.
+- **TPOT**: Time Per Output Token. The average time to generate each token after the first.
+- **KV Cache**: Key-Value Cache.
+- **HBM**: High Bandwidth Memory.
 
 ---
-
-# Day 71: Day 71: AI Infra System Design Topic 71
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+================================================================================
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### **Day 88: Serverless AI Serving and Cold Start Mitigation**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**1) Topic and Core Examination Areas**
+- Serverless LLM serving (AWS Lambda + GPU, Modal, Vercel AI)
+- Cold start problem and mitigation strategies
+- Provisioned concurrency for AI
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**2) Requirement Clarification and Metric Definitions**
+- Cold start latency target: < 10 seconds
+- Provisioned concurrency: 2-5 warm instances per model
+- Serverless QPS: 100-1,000 QPS burst
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**3) Core Architecture/Technical Component Design**
+- Serverless Framework: Modal, SageMaker Serverless Inference, or vLLM serverless endpoints
+- Cold Start Mitigation: Provisioned concurrency, model pre-warming, or always-on minimal instances
 
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Serverless vs Always-On Serving**: Serverless AI scales to zero and is cost-effective for spiky workloads, but cold starts (loading model into GPU memory) can take 5-30 seconds. Always-on serving has no cold start but incurs base cost.
+- **Provisioned Concurrency**: Keeping a minimum number of instances warm to handle immediate requests.
 
----
+**5) Trade-off analysis**
+- Serverless (scale to zero): Lowest base cost, but cold start latency can degrade user experience.
+- Provisioned concurrency: Reduces cold start, but increases base cost.
 
-# Day 72: Day 72: AI Infra System Design Topic 72
+**6) How to determine the optimal solution**
+- For spiky, low-frequency workloads, use serverless AI with provisioned concurrency (2-5 instances) to balance cost and latency.
+- For high-QPS, continuous workloads, use always-on model serving with auto-scaling.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**7) Full names and explanations of nouns and abbreviations**
+- **Serverless AI**: AI serving models that automatically scale and charge only for actual compute used, without managing servers.
+- **Cold Start**: The latency incurred when a new instance is launched and the model is loaded into memory/GPU.
+- **Provisioned Concurrency**: A feature that keeps a specified number of instances initialized and ready to serve requests.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+---
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+================================================================================
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### **Day 89: Edge AI Auto-Scaling and Distributed Inference**
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**1) Topic and Core Examination Areas**
+- Edge AI inference and deployment
+- Distributed inference across edge and cloud
+- Edge auto-scaling and device management
 
+**2) Requirement Clarification and Metric Definitions**
+- Edge devices: 10,000 IoT devices or edge GPUs
+- Inference latency target at edge: < 100 ms
+- Cloud offload threshold: When edge GPU utilization > 90%
 
----
+**3) Core Architecture/Technical Component Design**
+- Edge Inference: ONNX Runtime, TensorRT, or llama.cpp on edge GPUs/CPU
+- Cloud Offload: Route complex queries or high-load periods to cloud LLM serving
+- Device Management: Kubernetes KubeEdge or AWS IoT Greengrass
 
-# Day 73: Day 73: AI Infra System Design Topic 73
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Edge vs Cloud Inference**: Edge inference reduces latency and bandwidth cost, but edge devices have limited compute. Cloud inference offers powerful models but adds network latency.
+- **Distributed Inference**: Splitting the inference workload or model layers across edge and cloud (e.g., embedding at edge, generation in cloud).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**5) Trade-off analysis**
+- Edge inference: Low latency, privacy, offline capability, but limited model size and compute.
+- Cloud offload: Powerful models, but network latency and cost.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**6) How to determine the optimal solution**
+- For simple, latency-sensitive tasks (e.g., local embedding, filtering), use edge inference.
+- For complex generation or RAG, offload to cloud serving when edge capacity is exceeded or task complexity is high.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**7) Full names and explanations of nouns and abbreviations**
+- **Edge AI**: AI inference performed on local devices (edge) rather than in centralized cloud data centers.
+- **ONNX Runtime**: Open Neural Network Exchange Runtime. A cross-platform inference accelerator.
+- **KubeEdge**: An open-source system for extending native containerized application orchestration to edge devices.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+---
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+================================================================================
 
+### **Day 90: End-to-End AI Infra System Design: Integrating Data Pipelines, RAG, and Auto-Scaling**
 
----
+**1) Topic and Core Examination Areas**
+- Integrating data pipelines, RAG systems, and auto-scaling into a cohesive AI infrastructure
+- End-to-end latency and cost optimization
+- Production readiness and operational excellence
 
-# Day 74: Day 74: AI Infra System Design Topic 74
+**2) Requirement Clarification and Metric Definitions**
+- End-to-end RAG + Serving QPS: 10,000 QPS
+- Data pipeline throughput: 10 TB/day ingestion
+- RAG retrieval latency: P99 < 100 ms
+- LLM serving TTFT: < 500 ms, P99 total latency < 3 seconds
+- System availability: 99.99%
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**3) Core Architecture/Technical Component Design**
+- Data Pipeline: Kafka + Flink + Spark -> Feature Store / Vector DB ingestion
+- RAG System: LlamaIndex/LangChain -> Vector DB (Milvus/Pinecone) -> Reranker -> LLM
+- Serving & Auto-Scaling: vLLM/TensorRT-LLM on Kubernetes with KEDA auto-scaling based on TTFT and GPU utilization
+- Observability: Prometheus + Grafana + LangSmith
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Integration Patterns**: Decouple ingestion (async) from serving (sync). Use event-driven architecture for data updates to vector DB. Use auto-scaling on serving layer to handle RAG query spikes.
+- **End-to-End Optimization**: Cache embeddings and retrieval results; use continuous batching in vLLM; right-size GPU instances; implement rate limiting and backpressure.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**5) Trade-off analysis**
+- Decoupled vs Monolithic: Decoupled pipelines and serving are more resilient and scalable but more complex to operate. Monolithic is simpler but harder to scale components independently.
+- Caching vs Freshness: Caching improves latency and cost but may serve stale data; cache TTL must be tuned to data update frequency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**6) How to determine the optimal solution**
+- Design for decoupling: data ingestion (batch/stream) -> vector DB -> RAG orchestration -> LLM serving with auto-scaling.
+- Implement caching at embedding and retrieval layers.
+- Use KEDA + vLLM custom metrics (TTFT, GPU utilization) for auto-scaling.
+- Ensure observability and rate limiting for production readiness.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**7) Full names and explanations of nouns and abbreviations**
+- **Review of key terms from Days 61-90**: RAG, TTFT, TPOT, QPS, TPS, P99, HPA, VPA, KEDA, HNSW, FAISS, BM25, RRF, HyDE, PII, GDPR, HIPAA, vLLM, TensorRT-LLM, KServe, PagedAttention, KV Cache, HBM, DCGM, nvml, Karpenter, Spot Instances, L4/L7 Load Balancing, APM, OpenTelemetry, LangSmith, etc.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 91: Introduction to Checkpointing in Distributed Training & Fault Tolerance Basics
 
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to Checkpointing in Distributed Training and Fault Tolerance Basics.
+- Core Examination Areas: Purpose of checkpointing in large-scale AI training, fault tolerance mechanisms, checkpoint frequency, and basic recovery workflows.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **QPS (Queries Per Second)**: Not directly applicable to training, but inference QPS post-training is typically 50-200 QPS for a 7B model.
+- **TTFT (Time to First Token)**: Latency metric for inference, target < 200ms for interactive chat.
+- **TP99 Latency**: 99th percentile latency for checkpoint save/restore operations. Target: Save TP99 < 30 seconds for a 70B model checkpoint.
+- **HBM (High Bandwidth Memory)**: GPU memory size. For a 70B model, FP16/BF16 requires ~140GB per replica; with optimizer states (ZeRO-1), ~350GB per GPU (e.g., 8x H100 80GB).
 
-# Day 75: Day 75: AI Infra System Design Topic 75
+**3) Core Architecture/Technical Component Design**
+- **Training Cluster Architecture**: Compute nodes (GPU servers), storage nodes (distributed storage like Ceph or NFS), and control plane (Kubernetes or Slurm).
+- **Checkpointing Workflow**: Periodic snapshot of model weights, optimizer states, and training step metadata to persistent storage.
+- **Recovery Workflow**: On node failure, the control plane provisions a new node, restores the latest checkpoint from storage, and resumes training.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Periodic Checkpointing**: Save checkpoint every N steps (e.g., every 1000 steps). Simple but risks data loss up to N steps.
+- **Event-Driven Checkpointing**: Save on specific events (e.g., epoch end, validation metric improvement).
+- **Continuous Checkpointing**: Incrementally save state changes to reduce recovery time.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Frequency vs. Overhead*: More frequent checkpoints reduce potential data loss but increase I/O overhead and slow down training throughput.
+- *Storage Cost vs. Recovery Time*: Storing more historical checkpoints increases storage cost but provides more recovery points.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Calculate the checkpointing overhead percentage: (Checkpoint save time / Training time per step) * 100. Target < 5% overhead.
+- Determine acceptable data loss window based on business requirements (e.g., maximum 1 hour of training data loss).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **Checkpointing**: The process of saving the state of a training job (weights, optimizer states, step number) to persistent storage.
+- **Fault Tolerance**: The ability of a system to continue operating properly in the event of the failure of some of its components.
+- **HBM (High Bandwidth Memory)**: A type of computer memory that uses 3D stacking to provide higher bandwidth than traditional GDDR memory.
+- **TP99**: 99th percentile latency, meaning 99% of operations complete within this time.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 92: Checkpointing Strategies: Full vs. Incremental vs. Delta Checkpoints
 
-# Day 76: Day 76: AI Infra System Design Topic 76
+**1) Topic and Core Examination Areas**
+- Topic: Checkpointing Strategies: Full, Incremental, and Delta Checkpoints.
+- Core Examination Areas: Differences between checkpoint types, use cases, storage efficiency, and restore times.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Checkpoint Size**: A full checkpoint for a 70B model in BF16 is ~140GB. With optimizer states (ZeRO-3), it can be 350GB-500GB.
+- **Storage Throughput**: Target > 10 GB/s for distributed storage to handle concurrent checkpoint saves from 64 GPUs.
+- **Restore Time**: Time to load checkpoint into GPU memory. Target < 60 seconds for a 70B model.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Full Checkpoint**: Saves the entire state (weights, optimizer, scheduler, step number) in one operation.
+- **Incremental Checkpoint**: Saves only the state changes since the last checkpoint.
+- **Delta Checkpoint**: Saves the difference (delta) between the current state and a base checkpoint.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Full Checkpointing**: Simple to implement and restore. High storage and I/O cost.
+- **Incremental Checkpointing**: Reduces storage and I/O by only saving changes. Complex to implement due to state diff tracking.
+- **Delta Checkpointing**: Uses a base checkpoint and applies deltas. Useful for long-running jobs where weights change slowly.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Full vs. Incremental*: Full is simpler and has faster restore (single file), but incremental saves storage and network bandwidth.
+- *Complexity vs. Efficiency*: Delta/incremental strategies reduce storage but increase checkpointing logic complexity and potential for corruption.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For short training jobs (< 1 week), full checkpoints are optimal due to simplicity.
+- For long-running jobs (> 1 month), incremental or delta checkpoints combined with periodic full checkpoints (base) are optimal to balance storage and recovery time.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **BF16 (Brain Floating Point 16)**: A 16-bit floating-point format that provides the same dynamic range as 32-bit float but with 16 bits of precision.
+- **ZeRO-3 (Zero Redundancy Optimizer Stage 3)**: A memory optimization technique that partitions optimizer states, gradients, and parameters across data parallel ranks.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 77: Day 77: AI Infra System Design Topic 77
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 93: Checkpoint Storage Systems: Object Storage vs. Distributed File Systems
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Checkpoint Storage Systems: Object Storage vs. Distributed File Systems.
+- Core Examination Areas: Storage architecture, I/O performance, scalability, and cost considerations for checkpoint storage.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **IOPS (Input/Output Operations Per Second)**: Target > 100K IOPS for distributed file systems like GPFS or Lustre.
+- **Throughput**: Target > 10 GB/s for object storage (e.g., S3-compatible) or distributed FS for checkpoint save.
+- **Latency**: Metadata operation latency < 10ms for distributed file systems.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Object Storage (e.g., AWS S3, MinIO)**: Hierarchical namespace flattened into key-value pairs. Highly scalable, durable, but higher metadata latency.
+- **Distributed File Systems (e.g., Ceph, GPFS, Lustre, NFS)**: POSIX-compliant, supports hierarchical directories, lower latency for metadata operations, but requires more complex management.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Object Storage Solutions**: Use S3-compatible APIs. Benefits: infinite scalability, durability (99.999999999%). Drawbacks: Higher latency for small file operations, not ideal for frequent small checkpoint updates.
+- **Distributed File Systems (Lustre/GPFS)**: Benefits: High throughput and low latency for large file operations (like checkpoints). Drawbacks: Complex setup, higher infrastructure cost.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Scalability vs. Performance*: Object storage scales infinitely but has higher latency. Distributed FS offers high performance but requires careful capacity planning and management.
+- *Cost*: Object storage (especially cold storage tiers) is cheaper for long-term retention. Distributed FS is more expensive due to hardware requirements.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For frequent checkpointing (every 1000 steps) with large files, use a high-performance distributed file system (Lustre, GPFS) for the active checkpoint directory.
+- For archival and long-term retention, use object storage with lifecycle policies to transition old checkpoints to cheaper storage tiers.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **IOPS (Input/Output Operations Per Second)**: A performance measure used to benchmark block storage devices like SSDs and SANs.
+- **POSIX (Portable Operating System Interface)**: A family of standards specified by the IEEE for maintaining compatibility between operating systems.
+- **S3 (Simple Storage Service)**: Amazon's object storage service, now a standard term for S3-compatible object storage.
 
 ---
 
-# Day 78: Day 78: AI Infra System Design Topic 78
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 94: Checkpoint Compression and Encryption Techniques
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Checkpoint Compression and Encryption Techniques.
+- Core Examination Areas: Reducing checkpoint size via compression, ensuring data security via encryption, and their impact on I/O and compute.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Compression Ratio**: Target 2:1 to 3:1 for checkpoint compression (e.g., from 140GB to 50GB for a 70B model weights-only checkpoint).
+- **Encryption Overhead**: Target < 5% increase in checkpoint save/restore time due to encryption/decryption operations.
+- **TPS (Transactions Per Second)**: In the context of checkpoint management, TPS can refer to the number of checkpoint save/restore operations per second.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Compression Pipeline**: Model state -> Serialize -> Compress (e.g., using Zstandard, gzip) -> Write to storage.
+- **Encryption Pipeline**: Model state -> Serialize -> Encrypt (e.g., AES-256) -> Compress (optional) -> Write to storage.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Compression Algorithms**: 
+  - *Zstandard (zstd)*: High compression ratio with fast compress/decompress speeds. Recommended for checkpoints.
+  - *gzip*: Widely supported but slower decompression compared to zstd.
+- **Encryption Standards**: 
+  - *AES-256*: Advanced Encryption Standard with 256-bit keys. Industry standard for data at rest.
+  - *KMS (Key Management Service)*: External service for managing encryption keys (e.g., AWS KMS, HashiCorp Vault).
 
+**5) Trade-off analysis**
+- *Compression vs. Compute Overhead*: Compression reduces storage and network I/O but increases CPU usage for compress/decompress operations.
+- *Encryption vs. Performance*: Encryption ensures security but adds compute overhead for encrypt/decrypt operations, potentially increasing checkpoint save/restore time.
 
----
+**6) How to determine the optimal solution**
+- Use zstd compression with a balance of speed and ratio (e.g., level 3-5) to minimize compute overhead while achieving 2:1 compression.
+- Use AES-256 encryption with hardware-accelerated encryption (e.g., GPU or CPU AES-NI instructions) to keep overhead < 5%. Use KMS for key rotation and security compliance.
 
-# Day 79: Day 79: AI Infra System Design Topic 79
+**7) Full names and explanations of all nouns and abbreviations**
+- **Zstandard (zstd)**: A fast lossless compression algorithm created by Facebook, offering high compression ratios and fast decompression speeds.
+- **AES-256 (Advanced Encryption Standard with 256-bit key)**: A symmetric encryption algorithm specified by the U.S. government, widely used for securing sensitive data.
+- **KMS (Key Management Service)**: A cryptographic service that helps you create and control the encryption keys used to encrypt your data.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 95: Asynchronous vs. Synchronous Checkpointing & Checkpoint Overhead Reduction
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Asynchronous vs. Synchronous Checkpointing and Checkpoint Overhead Reduction.
+- Core Examination Areas: Checkpointing execution models, impact on training throughput, and techniques to minimize overhead.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Checkpoint Overhead**: Percentage of training time spent on checkpointing. Target < 3-5%.
+- **Training Throughput**: Measured in tokens per second per GPU or examples per second. Target drop due to checkpointing < 2%.
+- **TTFT (Time to First Token)**: Not directly applicable to training checkpointing, but relevant for the inference phase post-training.
 
+**3) Core Architecture/Technical Component Design**
+- **Synchronous Checkpointing**: Training computation pauses while checkpoint is saved to storage. Guarantees consistency but blocks training.
+- **Asynchronous Checkpointing**: Training computation continues while checkpoint is saved in the background. Requires state versioning to ensure consistency upon recovery.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Synchronous Approach**: Simple to implement. Uses `torch.save()` or `deepspeed.checkpoint()` which blocks the training loop.
+- **Asynchronous Approach**: Uses background threads or separate processes to serialize and upload checkpoint data. Frameworks like DeepSpeed and Megatron-LM support async checkpointing via offload to CPU or NVMe.
 
-# Day 80: Day 80: AI Infra System Design Topic 80
+**5) Trade-off analysis**
+- *Synchronous*: Guarantees consistent state but causes training pauses, reducing overall throughput.
+- *Asynchronous*: Maintains training throughput but introduces complexity in state management and potential for saving stale or inconsistent states if not implemented carefully.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For training jobs where every second of compute is critical (e.g., multi-million dollar training runs), use asynchronous checkpointing with background I/O.
+- Ensure the async checkpointing mechanism includes step-number metadata to allow recovery to the exact correct state, avoiding stale data restoration.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **NVMe (Non-Volatile Memory express)**: A high-speed storage interface standard for SSDs, offering lower latency and higher throughput than SATA or SAS.
+- **Megatron-LM**: A deep learning library developed by NVIDIA for training large transformer models, supporting advanced parallelism techniques.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 96: Checkpointing with ZeRO-Offload and Memory Management
 
+**1) Topic and Core Examination Areas**
+- Topic: Checkpointing with ZeRO-Offload and Memory Management.
+- Core Examination Areas: Integrating checkpointing with memory optimization techniques like ZeRO-Offload, managing CPU/GPU memory during save/restore.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **HBM (High Bandwidth Memory)**: GPU memory. For a 70B model with ZeRO-3, per-GPU HBM usage is ~80GB (with 8x H100 80GB GPUs).
+- **CPU RAM**: Target > 512GB per node to handle ZeRO-Offload and checkpoint serialization.
+- **Memory Bandwidth**: PCIe Gen4/Gen5 bandwidth between CPU and GPU. Target > 32 GB/s (PCIe 4.0 x16) for offload operations.
 
-# Day 81: Day 81: AI Infra System Design Topic 81
+**3) Core Architecture/Technical Component Design**
+- **ZeRO-Offload**: Offloads optimizer states and gradients from GPU to CPU RAM, and optionally to NVMe, to reduce GPU memory footprint.
+- **Checkpointing with ZeRO-Offload**: During checkpoint save, the framework gathers states from CPU/GPU, serializes them, and writes to storage. Requires careful memory management to avoid OOM (Out of Memory) errors.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **ZeRO-Offload (DeepSpeed)**: Dynamically offloads parts of the model and optimizer to CPU. Reduces GPU memory but increases CPU-GPU data transfer.
+- **CPU Pinning and Memory Allocation**: Ensure CPU memory is properly allocated and pinned to avoid swapping during checkpoint serialization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *ZeRO-Offload vs. Performance*: Reduces GPU memory requirements, enabling larger models, but increases CPU-GPU transfer overhead, potentially slowing down training and checkpointing.
+- *NVMe Offload vs. Cost*: Offloading to NVMe reduces RAM requirements but NVMe storage is more expensive than DRAM and has lower bandwidth.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For models that fit in GPU memory without offload, avoid ZeRO-Offload to maximize training speed.
+- For models that exceed GPU memory (e.g., 70B+ models on 80GB GPUs), use ZeRO-Offload with sufficient CPU RAM (512GB+) and ensure PCIe bandwidth is not the bottleneck. Use NVMe offload only if CPU RAM is insufficient.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **ZeRO-Offload (Zero Redundancy Optimizer with Offload)**: A DeepSpeed technique that offloads optimizer states, gradients, and parameters to CPU memory or NVMe to reduce GPU memory usage.
+- **OOM (Out of Memory)**: An error that occurs when a program attempts to allocate more memory than is available.
+- **PCIe (Peripheral Component Interconnect Express)**: A high-speed serial computer expansion bus standard, used for connecting GPUs to CPUs.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 97: Fault Tolerance Mechanisms: Checkpoint Recovery, Rollback, and Restart Strategies
 
-# Day 82: Day 82: AI Infra System Design Topic 82
+**1) Topic and Core Examination Areas**
+- Topic: Fault Tolerance Mechanisms: Checkpoint Recovery, Rollback, and Restart Strategies.
+- Core Examination Areas: How to recover from node failures, network partitions, and storage errors during training.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **RTO (Recovery Time Objective)**: Target < 10 minutes for checkpoint recovery and job restart.
+- **RPO (Recovery Point Objective)**: Target < 1 training step (or latest checkpoint step) for data loss.
+- **Node Failure Rate**: In a cluster of 1000 GPUs, expect 1-2 node failures per week. 
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Checkpoint Recovery Workflow**: Detect failure -> Provision new node -> Fetch latest checkpoint from storage -> Initialize model and optimizer state -> Resume training from saved step.
+- **Rollback Strategy**: If a corrupted checkpoint is detected during restore, fall back to the previous valid checkpoint.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Automatic Recovery (Kubernetes/Slurm)**: Orchestrators detect failed pods/nodes and reschedule them. The training framework (e.g., PyTorch Distributed) reads the checkpoint step and resumes.
+- **Checkpoint Validation**: Before resuming, validate checkpoint integrity (e.g., checksums, tensor shape checks) to avoid restoring corrupted data.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Frequent Validation vs. Recovery Speed*: Validating checkpoints ensures data integrity but adds time to the recovery process.
+- *Rollback Frequency vs. Data Loss*: Rolling back to an older checkpoint increases data loss but ensures training continues with valid state.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Implement automated checkpoint validation (checksums, metadata checks) as part of the recovery workflow.
+- Set RTO and RPO based on business requirements: for critical long-term training, RPO should be the latest checkpoint, and RTO should be minimized via high-performance storage and fast node provisioning.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **RTO (Recovery Time Objective)**: The maximum acceptable length of time that a system or application can be down after a failure or disaster.
+- **RPO (Recovery Point Objective)**: The maximum acceptable amount of data loss measured in time from the last backup point.
+- **Pod (Kubernetes)**: The smallest and simplest unit in the Kubernetes object model that you create or deploy.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 83: Day 83: AI Infra System Design Topic 83
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 98: Checkpoint Management and Lifecycle (Retention, Pruning, Archiving)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Checkpoint Management and Lifecycle: Retention, Pruning, Archiving.
+- Core Examination Areas: Strategies for managing the growing number of checkpoints over time, storage cost optimization, and retention policies.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Storage Cost**: Target < $0.02 per GB per month for archival storage.
+- **Retention Period**: Active checkpoints retained for 7-14 days; historical checkpoints archived after 30 days.
+- **Pruning Frequency**: Automated pruning of checkpoints older than retention period or those not meeting quality metrics (e.g., validation loss not improved).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Lifecycle Management System**: A service or script that monitors checkpoint directories, applies retention policies, and moves old checkpoints to archival storage (e.g., S3 Glacier).
+- **Metadata Registry**: A database or file (e.g., JSON/CSV) that tracks checkpoint step numbers, validation metrics, and storage locations.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Automated Pruning Scripts**: Cron jobs or Kubernetes CronJobs that delete checkpoints older than N days or keep only the top K checkpoints based on validation metrics.
+- **Storage Tiering**: Use hot storage (high-performance FS) for recent checkpoints, and cold storage (S3 Glacier, Azure Archive) for old checkpoints.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Retention Length vs. Storage Cost*: Longer retention provides more recovery points and historical model versions but increases storage costs.
+- *Pruning Aggressiveness vs. Recovery Options*: Aggressive pruning saves storage but reduces the number of available checkpoints for rollback or model selection.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Implement a tiered lifecycle: Keep the last 3-5 checkpoints (or checkpoints from each epoch) in hot storage for quick recovery. Archive all other checkpoints to cold storage after 7 days. Use metadata to prune checkpoints that did not improve validation metrics.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **S3 Glacier**: Amazon S3 Glacier is a secure, durable, and low-cost storage class for data archiving and long-term backup.
+- **CronJob (Kubernetes)**: A Kubernetes object used to run scheduled tasks, similar to cron jobs in Linux.
 
 ---
 
-# Day 84: Day 84: AI Infra System Design Topic 84
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 99: Checkpointing in Long-Running Training Jobs (Weeks/Months scale)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Checkpointing in Long-Running Training Jobs (Weeks/Months scale).
+- Core Examination Areas: Strategies for maintaining stability, managing storage growth, and ensuring recovery over extended training periods.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Training Duration**: 2-4 weeks for a 70B model, up to 3-6 months for 100B+ models or foundation models.
+- **Checkpoint Frequency**: Every 1000-5000 steps for long-running jobs to balance overhead and recovery granularity.
+- **Storage Growth Rate**: For a 70B model with checkpoints every 5000 steps over 30 days, expect 100-200 checkpoints, totaling 14-28TB of raw checkpoint data.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Long-Lived Job Management**: Use orchestrators like Slurm or Kubernetes with long job timeouts. Implement health checks and automatic restart mechanisms.
+- **Storage Quota Management**: Monitor storage usage and enforce quotas to prevent cluster-wide storage exhaustion.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Job Checkpointing at Scheduler Level**: Slurm supports checkpointing via `scontrol checkpoint <job_id>`, which saves the job state to storage.
+- **Framework-Level Long-Running Optimizations**: Use incremental checkpointing and periodic full checkpoints to manage storage growth.
 
+**5) Trade-off analysis**
+- *Scheduler Checkpointing vs. Framework Checkpointing*: Scheduler-level checkpointing captures the entire process state but is less portable. Framework-level (PyTorch/DeepSpeed) is portable across different compute environments.
+- *Storage Growth vs. Recovery Granularity*: More frequent checkpoints provide finer recovery granularity but accelerate storage growth.
 
----
+**6) How to determine the optimal solution**
+- For training jobs lasting weeks to months, use framework-level checkpointing with a mix of incremental and periodic full checkpoints. Implement automated lifecycle management to archive or prune old checkpoints, and monitor storage quotas closely.
 
-# Day 85: Day 85: AI Infra System Design Topic 85
+**7) Full names and explanations of all nouns and abbreviations**
+- **Slurm**: Simple Linux Utility for Resource Management, a highly scalable and fault-tolerant cluster management and job scheduling system for large and small Linux clusters.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 100: Checkpointing Deep Dive: Distributed Checkpointing (e.g., FSDP, DeepSpeed)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Checkpointing Deep Dive: Distributed Checkpointing (FSDP, DeepSpeed ZeRO).
+- Core Examination Areas: How distributed training frameworks handle checkpointing across multiple GPUs and nodes.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **DP (Data Parallelism)**: Replicating the model across multiple GPUs, each processing a different batch of data.
+- **TP (Tensor Parallelism)**: Splitting model tensors across multiple GPUs.
+- **PP (Pipeline Parallelism)**: Splitting model layers across multiple GPUs or nodes.
+- **FSDP (Fully Sharded Data Parallel)**: PyTorch's technique for sharding model states across data parallel ranks.
 
+**3) Core Architecture/Technical Component Design**
+- **Distributed Checkpointing Workflow**: Each GPU/worker saves its sharded state to a shared storage system, or a rank-0 worker gathers all states and saves a unified checkpoint.
+- **FSDP Checkpointing**: Uses `sharded_state_dict` to save only the sharded portions, reducing per-GPU memory and I/O during save.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **DeepSpeed ZeRO Checkpointing**: ZeRO-1/2/3 have different checkpointing behaviors. ZeRO-3 shards parameters, optimizer states, and gradients, requiring all ranks to participate in checkpoint save/restore.
+- **FSDP Checkpointing**: PyTorch FSDP provides `save_state_dict` and `load_state_dict` with sharding support, compatible with distributed file systems.
 
-# Day 86: Day 86: AI Infra System Design Topic 86
+**5) Trade-off analysis**
+- *Unified vs. Sharded Checkpoints*: Unified checkpoints (saved by rank-0) are easier to manage and restore but require rank-0 to handle large I/O. Sharded checkpoints (each rank saves its part) distribute I/O but require coordination during restore.
+- *ZeRO-2 vs. ZeRO-3 Checkpointing*: ZeRO-3 reduces memory further but increases communication and checkpointing complexity compared to ZeRO-2.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Use FSDP or DeepSpeed ZeRO-3 for models that exceed GPU memory. Ensure the distributed checkpointing strategy uses sharded saves to all ranks in parallel, writing to a high-performance distributed file system or S3-compatible object storage with Multipart Upload support.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **FSDP (Fully Sharded Data Parallel)**: A PyTorch distributed training technique that shards model states (parameters, gradients, optimizer states) across data parallel ranks to reduce memory usage.
+- **ZeRO-1/2/3**: Stages of DeepSpeed's Zero Redundancy Optimizer, progressively sharding optimizer states, gradients, and parameters to reduce memory footprint.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 101: Introduction to Multimodal Training & Vision-Language Models (VLMs)
 
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to Multimodal Training and Vision-Language Models (VLMs).
+- Core Examination Areas: Concepts of multimodal AI, architecture of VLMs, training data requirements, and alignment techniques.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **QPS (Queries Per Second)**: Inference QPS for a VLM like LLaVA-7B: target 10-50 QPS depending on image resolution and context length.
+- **TTFT (Time to First Token)**: For VLM inference with image input, target TTFT < 500ms for standard resolution images (e.g., 336x336 or 768x768).
+- **HBM (High Bandwidth Memory)**: A 7B VLM requires ~14GB HBM for weights (BF16), plus KV cache and image encoder state. Total ~24GB per model replica on 80GB GPUs.
 
-# Day 87: Day 87: AI Infra System Design Topic 87
+**3) Core Architecture/Technical Component Design**
+- **VLM Architecture**: Comprises an image encoder (e.g., ViT - Vision Transformer), a projection layer (e.g., MLP or Linear), and a text LLM (e.g., Llama, Qwen).
+- **Training Data Pipeline**: Images and corresponding text descriptions (captions, Q&A pairs) are processed, tokenized, and fed into the model for contrastive or generative training.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Vision Transformer (ViT)**: Splits images into patches and processes them using transformer layers. Produces image tokens.
+- **Projection Layer**: Maps image tokens to the text embedding space of the LLM. Commonly an MLP or a single linear layer.
+- **Training Objectives**: Next-token prediction (generative) or contrastive learning (aligning image and text embeddings).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Image Resolution vs. Compute Cost*: Higher resolution images produce more image tokens, increasing KV cache size and compute for attention. Lower resolution saves compute but may reduce visual detail understanding.
+- *Separate Encoders vs. Unified Models*: Separate image and text encoders are easier to train but require a projection layer. Unified models (e.g., training ViT and LLM jointly) are more complex but may achieve better alignment.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For most VLM applications, use a pre-trained image encoder (e.g., CLIP ViT-L/14) and a pre-trained LLM, with a trainable projection layer. Train with next-token prediction on image-text pairs. Start with standard resolution (e.g., 336x336 or 768x768) and scale up only if visual detail is critical.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **VLM (Vision-Language Model)**: A model that processes and understands both visual (image/video) and textual data.
+- **ViT (Vision Transformer)**: A transformer-based architecture designed for image classification and other vision tasks, processing images as sequences of patches.
+- **CLIP (Contrastive Language-Image Pre-training)**: A model trained to match images and text using contrastive learning, producing aligned image and text embeddings.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 102: Multimodal Data Pipeline: Image, Text, Audio Data Processing
 
-# Day 88: Day 88: AI Infra System Design Topic 88
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Data Pipeline: Image, Text, Audio Data Processing.
+- Core Examination Areas: Data ingestion, preprocessing, tokenization, and batching for multimodal training.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput TPS (Tokens Per Second)**: Multimodal training throughput target: 5000-10000 tokens per second per GPU for a 7B VLM.
+- **Data Processing Latency**: Time to preprocess an image-text pair. Target < 10ms per pair to avoid becoming a bottleneck for GPU training.
+- **Batch Size**: Global batch size for multimodal training: 256-1024 samples (image-text pairs).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Data Ingestion**: Read from object storage (S3) or distributed file system. Use parallel loaders (e.g., PyTorch DataLoader with multiple workers).
+- **Preprocessing Pipeline**: Image resizing, normalization, text tokenization using a tokenizer (e.g., Llama tokenizer).
+- **Batching**: Group image-text pairs into batches, ensuring padding or dynamic batching to optimize GPU utilization.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Dynamic Batching vs. Static Batching**: Dynamic batching groups samples with similar sequence lengths at runtime. Static batching uses fixed sequence lengths. Dynamic batching improves GPU utilization but adds scheduling overhead.
+- **Preprocessing on CPU vs. GPU**: Image preprocessing (resizing, normalization) is typically done on CPU using libraries like Pillow or OpenCV. Tokenization is also CPU-bound.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *CPU Preprocessing vs. GPU Preprocessing*: CPU preprocessing is standard and leverages optimized libraries (OpenCV). GPU preprocessing can be faster for large batches but consumes GPU memory and compute that could be used for training.
+- *Fixed vs. Dynamic Batching*: Fixed batching is simpler but may lead to padding overhead. Dynamic batching minimizes padding but requires more complex sequence length tracking.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use CPU-based preprocessing with PyTorch DataLoader and multiple workers. Use dynamic batching or padding to a maximum sequence length to optimize GPU utilization. Ensure preprocessing throughput matches or exceeds GPU training throughput.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **TPS (Tokens Per Second)**: A metric measuring the number of tokens processed or generated per second during training or inference.
+- **PyTorch DataLoader**: A utility in PyTorch that loads data in parallel using multiple worker processes, supporting batching and shuffling.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 89: Day 89: AI Infra System Design Topic 89
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 103: Multimodal Tokenization: Image Tokens, Audio Tokens, Text Tokens
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Tokenization: Image Tokens, Audio Tokens, Text Tokens.
+- Core Examination Areas: How different modalities are converted into token sequences that can be processed by transformer models.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Image Token Count**: For a 336x336 image with ViT patch size 14x14, token count = (336/14) * (336/14) = 24 * 24 = 576 tokens.
+- **Audio Token Count**: For audio sampled at 16kHz with a tokenizer like Whisper's, token count depends on duration. 10 seconds of audio ~ 150-300 tokens.
+- **Context Length**: Total token sequence length (image tokens + text tokens). Target context length for VLMs: 2048-4096 tokens.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Text Tokenization**: Convert text to integer IDs using a vocabulary (e.g., Llama tokenizer with ~32K or 128K tokens).
+- **Image Tokenization**: Use an image encoder (ViT) to produce continuous embeddings, which are then treated as "image tokens" in the transformer sequence.
+- **Audio Tokenization**: Use an audio encoder (e.g., Whisper encoder) to produce audio tokens or continuous embeddings.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Discrete Image Tokenization (e.g., VQ-VAE)**: Converts images to discrete token IDs similar to text. Allows using standard text LLM decoding.
+- **Continuous Image Tokens (e.g., ViT embeddings)**: Image encoder produces continuous vectors, projected to the LLM's embedding space. More common in current VLMs like LLaVA.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Discrete vs. Continuous Tokens*: Discrete tokens allow the LLM to use its standard autoregressive decoding, but require training a visual tokenizer (VQ-VAE). Continuous tokens are easier to integrate with pre-trained LLMs but may require special handling in the attention mechanism.
+- *Patch Size vs. Token Count*: Smaller patch sizes produce more tokens, capturing finer details but increasing compute and KV cache size.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For most VLM training, use continuous image tokens from a pre-trained ViT encoder, projected via an MLP to the LLM's embedding space. Use a patch size that balances detail and token count (e.g., 14x14 or 16x16). Reserve discrete tokenization for specialized applications requiring visual autoregressive generation.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **VQ-VAE (Vector Quantized Variational AutoEncoder)**: A type of autoencoder that uses vector quantization to produce discrete latent representations, often used for image or audio tokenization.
+- **Autoregressive Decoding**: A text generation method where the model predicts the next token based on all previously generated tokens.
 
 ---
 
-# Day 90: Day 90: AI Infra System Design Topic 90
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 104: Multimodal Alignment Techniques: Contrastive Learning, Cross-Attention
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Alignment Techniques: Contrastive Learning and Cross-Attention.
+- Core Examination Areas: How to align different modalities (image, text, audio) in a shared representation space.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Alignment Loss**: Loss function measuring the distance between image and text embeddings. Target loss < 0.1 for well-aligned models.
+- **Retrieval Accuracy**: Metric for multimodal retrieval (e.g., image-to-text, text-to-image). Target Recall@1 > 80% on benchmark datasets.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Contrastive Learning Architecture**: Two encoders (image and text) produce embeddings. A loss function (e.g., InfoNCE) pulls matching pairs together and pushes non-matching pairs apart.
+- **Cross-Attention Architecture**: In VLMs, text tokens attend to image tokens via cross-attention layers in the LLM or projection module.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **InfoNCE Loss**: A contrastive loss function that uses a batch of positive and negative pairs. Commonly used in CLIP training.
+- **Cross-Attention in Transformers**: Allows text tokens to attend to image tokens, enabling the LLM to "see" the image when generating text.
 
-
----
+**5) Trade-off analysis**
+- *Contrastive vs. Generative Alignment*: Contrastive learning (CLIP) aligns embeddings but does not enable generative responses. Generative alignment (LLaVA) trains the LLM to generate text based on image tokens, enabling Q&A and description.
+- *Separate Encoders vs. Joint Training*: Training encoders separately is faster but may result in suboptimal alignment. Joint training of image encoder and LLM improves alignment but is computationally expensive.
 
-## DAYS-91-120
+**6) How to determine the optimal solution**
+- For VLMs that need to generate text based on images, use generative alignment with cross-attention and next-token prediction. Use a pre-trained contrastive model (like CLIP) for the image encoder to provide good initial alignment, then fine-tune jointly with the LLM if resources permit.
 
-# Day 91: Day 91: AI Infra System Design Topic 91
+**7) Full names and explanations of all nouns and abbreviations**
+- **InfoNCE Loss**: A contrastive loss function used to train models to distinguish between positive and negative pairs in a embedding space.
+- **Cross-Attention**: A mechanism in transformers where one set of tokens (e.g., text) attends to another set (e.g., image), allowing information flow between modalities.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
+================================================================================
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+### Day 105: Vision-Language Model Architecture: CLIP, LLaVA, Qwen-VL
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
+**1) Topic and Core Examination Areas**
+- Topic: Vision-Language Model Architecture: CLIP, LLaVA, Qwen-VL.
+- Core Examination Areas: Architectural differences between contrastive VLMs (CLIP) and generative VLMs (LLaVA, Qwen-VL).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
+**2) Requirement Clarification and Metric Definitions**
+- **Model Parameters**: CLIP ViT-L/14: ~300M parameters (image encoder) + 300M (text encoder) = ~600M. LLaVA-7B: ~7B LLM parameters + ~300M image encoder = ~7.3B total.
+- **Inference Latency TP99**: For LLaVA-7B inference with image input, TP99 latency target < 1 second for full response generation.
 
+**3) Core Architecture/Technical Component Design**
+- **CLIP Architecture**: Two separate encoders (image and text) trained with contrastive loss. No generation capability; used for retrieval and classification.
+- **LLaVA Architecture**: Combines a pre-trained ViT image encoder, a linear projection layer, and a pre-trained LLM (e.g., Llama). Trained with next-token prediction on image-text Q&A pairs.
+- **Qwen-VL Architecture**: Similar to LLaVA but with improvements in image tokenization, multi-resolution support, and advanced cross-attention mechanisms.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Linear Projection vs. MLP Projection**: Simple linear layers are faster to train but may have limited capacity. MLP (multi-layer perceptron) projections offer better alignment but require more compute.
+- **Multi-Resolution Support**: Training VLMs to handle images of varying resolutions by dynamically adjusting image token count or using dynamic positional encodings.
 
-# Day 92: Day 92: AI Infra System Design Topic 92
+**5) Trade-off analysis**
+- *CLIP vs. LLaVA-type Models*: CLIP is better for retrieval and classification. LLaVA-type models are better for generative tasks like image description and VQA (Visual Question Answering).
+- *Projection Complexity*: Simpler projections train faster but may limit the model's ability to capture complex image-text relationships.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Choose CLIP if the use case is image-text retrieval, classification, or embedding-based search. Choose LLaVA/Qwen-VL architecture if the use case requires generative responses, VQA, or image-based reasoning.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **VQA (Visual Question Answering)**: A task where a model answers questions about the content of an image.
+- **MLP (Multi-Layer Perceptron)**: A class of feedforward artificial neural network with at least three layers of nodes: an input layer, a hidden layer, and an output layer.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 106: Multimodal Training Scalability: Data Parallelism, Tensor Parallelism for VLMs
 
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Training Scalability: Data Parallelism, Tensor Parallelism for VLMs.
+- Core Examination Areas: How to scale VLM training across multiple GPUs and nodes using parallelism techniques.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **DP (Data Parallelism)**: Replicating the model across GPUs, each processing a subset of the batch.
+- **TP (Tensor Parallelism)**: Splitting model layers or tensors across GPUs.
+- **GPUs Required**: For training a 7B VLM with a batch size of 256, using FP16/BF16, ZeRO-1, typically 4-8x A100/H100 80GB GPUs are sufficient. For 70B VLM, 32-64x H100 80GB GPUs.
 
-# Day 93: Day 93: AI Infra System Design Topic 93
+**3) Core Architecture/Technical Component Design**
+- **VLM Parallelism Strategy**: Image encoder can be replicated or sharded. LLM part uses DP, TP, PP, and ZeRO as needed.
+- **Communication Overhead**: Cross-GPU communication for gradient sync (DP) and tensor sharding (TP).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **FSDP (Fully Sharded Data Parallel)**: PyTorch's DP implementation that shards optimizer states and gradients, reducing memory per GPU.
+- **Megatron-LM Tensor Parallelism**: Splits matrix multiplications in transformer layers across GPUs, requiring all-gather and reduce-scatter operations.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *DP vs. TP*: DP is easier to implement and scales well with batch size, but each GPU needs a full model copy. TP reduces memory per GPU by splitting tensors but increases communication overhead.
+- *Image Encoder Parallelism*: The image encoder is often smaller than the LLM and can be replicated across DP groups, while the LLM uses TP/PP.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For VLMs up to 7B parameters, use FSDP or ZeRO-1 with DP. For 70B+ VLMs, combine DP, TP, and PP (3D parallelism) with ZeRO-3 for optimizer states. Replicate the image encoder across DP groups to avoid sharding its relatively small state.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **FSDP (Fully Sharded Data Parallel)**: A PyTorch technique for scaling training by sharding model states across data parallel ranks.
+- **3D Parallelism**: Combining Data Parallelism (DP), Tensor Parallelism (TP), and Pipeline Parallelism (PP) to scale training of very large models.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 107: Multimodal Inference: Multimodal KV Cache, Prefill and Decode Phases
 
-# Day 94: Day 94: AI Infra System Design Topic 94
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Inference: Multimodal KV Cache, Prefill and Decode Phases.
+- Core Examination Areas: How inference works for VLMs, including the handling of image tokens in the KV cache and the two-phase inference process.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **KV Cache (Key-Value Cache)**: Storage of past keys and values in transformer layers to avoid recomputing them during autoregressive decoding.
+- **Prefill Phase**: Processing the initial prompt (image tokens + text tokens) to compute KV cache and generate the first output token.
+- **Decode Phase**: Generating subsequent tokens one by one, using the KV cache.
+- **TTFT (Time to First Token)**: Latency of the prefill phase. Target < 500ms for VLM with 336x336 image.
+- **TPS (Tokens Per Second)**: Decode phase throughput. Target 20-50 tokens/second for a 7B VLM.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Multimodal KV Cache**: Includes both image tokens and text tokens from the prefill phase. Image token count can be large (e.g., 576 tokens for 336x336 image), increasing KV cache size.
+- **Inference Engine**: Use vLLM or TensorRT-LLM with support for multimodal KV cache and continuous batching.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **PagedAttention**: A KV cache management technique (used in vLLM) that allocates KV cache in non-contiguous memory blocks, similar to virtual memory paging. Reduces memory fragmentation and increases throughput.
+- **Continuous Batching vs. Static Batching**: Continuous batching (or interleaved batching) dynamically adds new requests to the decode phase as slots become available, improving GPU utilization.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Image Token Count vs. KV Cache Size*: More image tokens increase prefill compute and KV cache size, reducing the number of concurrent requests the system can handle.
+- *PagedAttention vs. Traditional KV Cache*: PagedAttention reduces memory waste and increases throughput but adds complexity to the inference engine.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use an inference engine like vLLM with PagedAttention and continuous batching support for VLMs. Optimize image token count by using efficient image encoders and resolution scaling to balance TTFT and throughput.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **KV Cache (Key-Value Cache)**: In transformer models, the cached key and value states from previous tokens to avoid redundant computation during autoregressive generation.
+- **vLLM**: An open-source library for fast and easy LLM inference and serving, featuring PagedAttention and continuous batching.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 95: Day 95: AI Infra System Design Topic 95
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 108: Multimodal Training Challenges: Imbalanced Modalities, Modality Drop
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Training Challenges: Imbalanced Modalities and Modality Drop.
+- Core Examination Areas: Issues that arise when training on multimodal data, including modality imbalance and the phenomenon where the model relies on only one modality.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Modality Drop**: A phenomenon where the model ignores one modality (e.g., image) and relies solely on another (e.g., text) to make predictions.
+- **Dataset Balance**: Ratio of image-text pairs with high-quality annotations. Target > 80% high-quality pairs in the training set.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Modality Imbalance**: Occurs when one modality's data is significantly larger or easier to learn than another.
+- **Regularization Techniques**: Add modality-specific loss terms or use dropout on modalities to force the model to learn from both.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Modality Dropout**: Randomly drop one modality during training to prevent the model from over-relying on the other.
+- **Contrastive Regularization**: Add a contrastive loss between image and text embeddings even in generative training to maintain alignment.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Modality Dropout vs. Data Efficiency*: Dropout reduces the effective use of multimodal data during training but prevents modality drop. 
+- *Additional Loss Terms vs. Complexity*: Adding contrastive or alignment loss terms improves modality balance but increases training complexity and compute.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use high-quality, balanced multimodal datasets. Apply modality dropout at a low rate (e.g., 5-10%) during early training stages. Monitor modality contribution using attention weights or ablation studies, and adjust loss weights accordingly.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **Ablation Study**: A research method where parts of a model or system are removed to understand their contribution to the overall performance.
 
 ---
 
-# Day 96: Day 96: AI Infra System Design Topic 96
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 109: Audio-Text and Video-Text Training Architectures
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Audio-Text and Video-Text Training Architectures.
+- Core Examination Areas: Extending VLM concepts to audio and video modalities, including tokenization and alignment techniques.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Audio Sampling Rate**: Typically 16kHz or 48kHz for speech and audio models.
+- **Video Frame Rate**: 1-4 frames per second (FPS) sampled from video for training, to balance temporal information and compute cost.
+- **Audio Token Count**: For a 10-second audio clip at 16kHz with Whisper-style tokenizer, ~150-300 audio tokens.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Audio-Text Models**: Use an audio encoder (e.g., Whisper encoder, HuBERT) to produce audio tokens, projected to the LLM's embedding space.
+- **Video-Text Models**: Sample video frames, process each with an image encoder (ViT), and aggregate frame tokens using temporal pooling or a separate video transformer.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Whisper Architecture**: An audio model trained on large-scale multilingual speech data, using an encoder-decoder transformer architecture. Can be used as an audio tokenizer for VLMs.
+- **Temporal Pooling**: Averaging or attention-based aggregation of frame tokens to reduce sequence length before feeding to the LLM.
 
+**5) Trade-off analysis**
+- *Frame Sampling Rate vs. Compute*: Higher frame rates capture more temporal detail but increase video token count and compute. Lower rates save compute but may miss important events.
+- *Audio Tokenization: Discrete vs. Continuous*: Similar to images, audio can be tokenized discretely (codebook from VQ-VAE) or continuously (encoder embeddings). Continuous is more common in current audio-VLMs.
 
----
+**6) How to determine the optimal solution**
+- For audio-text models, use pre-trained audio encoders like Whisper or HuBERT with continuous embeddings projected to the LLM. For video-text models, sample at 1-2 FPS and use frame-level ViT encoders with temporal pooling or a lightweight video transformer to aggregate tokens.
 
-# Day 97: Day 97: AI Infra System Design Topic 97
+**7) Full names and explanations of all nouns and abbreviations**
+- **HuBERT (Hidden Unit BERT)**: A self-supervised learning method for speech representation, similar to BERT but for audio.
+- **FPS (Frames Per Second)**: A measure of how many consecutive images, frames, or video samples are displayed or processed per second.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 110: Multimodal Evaluation Metrics and Benchmarks (e.g., MMBench, SEED-Bench)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Multimodal Evaluation Metrics and Benchmarks.
+- Core Examination Areas: How to evaluate VLMs and multimodal models, including standard benchmarks and metrics.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Accuracy**: Percentage of correct answers in VQA or image-text retrieval tasks. Target > 70% accuracy on standard VQA benchmarks for a 7B VLM.
+- **BLEU/ROUGE/METRICS**: Text generation metrics. BLEU (Bilingual Evaluation Understudy), ROUGE (Recall-Oriented Understudy for Gisting Evaluation).
 
+**3) Core Architecture/Technical Component Design**
+- **Evaluation Pipeline**: Run model on benchmark datasets (e.g., MMBench, SEED-Bench, LLaVA-Bench), collect predictions, and compute metrics using evaluation scripts.
+- **Benchmarks**: MMBench (Multimodal Benchmark), SEED-Bench (focused on diverse visual understanding), LLaVA-Bench (VQA and description tasks).
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Multiple-Choice Evaluation**: Many multimodal benchmarks use multiple-choice questions. Evaluate by comparing log probabilities of each option.
+- **Open-Ended Evaluation**: For descriptive tasks, use LLM-as-a-judge to score model outputs against reference answers or rubrics.
 
-# Day 98: Day 98: AI Infra System Design Topic 98
+**5) Trade-off analysis**
+- *Multiple-Choice vs. Open-Ended*: Multiple-choice is easier to evaluate automatically but may not reflect real-world generative capabilities. Open-ended evaluation is more realistic but requires LLM-as-a-judge or human evaluation, which is slower and more costly.
+- *Benchmark Coverage vs. Specificity*: Broad benchmarks cover many tasks but may not be sensitive to specific capabilities. Specialized benchmarks test specific skills but may not reflect overall performance.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Use a combination of multiple-choice benchmarks (MMMB, MMBench) and open-ended benchmarks (LLaVA-Bench, SEED-Bench) with LLM-as-a-judge evaluation to get a comprehensive view of model capabilities.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **BLEU (Bilingual Evaluation Understudy)**: A metric for evaluating the quality of text which has been machine-translated from one natural language to another.
+- **ROUGE (Recall-Oriented Understudy for Gisting Evaluation)**: A set of metrics and software package used in evaluating automatic summarization and machine translation.
+- **LLM-as-a-Judge**: Using a large language model to evaluate or score the outputs of another model based on given criteria or rubrics.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 111: Introduction to Model Registries & Model Versioning
 
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to Model Registries and Model Versioning.
+- Core Examination Areas: Purpose of model registries, versioning strategies, and metadata management for machine learning models.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Model Version**: A unique identifier for a specific iteration of a model (e.g., `model-v1.2.0`, `model-20231015`).
+- **Deployment Stages**: Development, Staging, Production. Models move through these stages in the registry.
+- **Registry Uptime**: Target > 99.9% availability for model registry services to ensure CI/CD and deployment pipelines are not blocked.
 
-# Day 99: Day 99: AI Infra System Design Topic 99
+**3) Core Architecture/Technical Component Design**
+- **Model Registry Architecture**: A centralized service or database that stores model artifacts, metadata, versions, and deployment status.
+- **Versioning Strategy**: Semantic versioning (Major.Minor.Patch) or timestamp-based versioning.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Semantic Versioning**: `MAJOR.MINOR.PATCH`. MAJOR for incompatible API changes, MINOR for backward-compatible features, PATCH for backward-compatible bug fixes.
+- **Registry Types**: File-based (e.g., Hugging Face Hub), Database-backed (e.g., MLflow Model Registry), Cloud-native (e.g., AWS SageMaker Model Registry).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Centralized vs. Distributed Registries*: Centralized registries provide a single source of truth but can become a bottleneck or single point of failure. Distributed registries improve availability but require consistency mechanisms.
+- *Semantic vs. Timestamp Versioning*: Semantic versioning is human-readable and conveys change type. Timestamp versioning is automatic but less informative.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Use a database-backed or cloud-native model registry with semantic versioning for production ML systems. Ensure the registry supports staging environments (Development, Staging, Production) and integrates with CI/CD pipelines.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **CI/CD (Continuous Integration / Continuous Deployment)**: A software development practice where code changes are automatically tested and deployed to production.
+- **Semantic Versioning (SemVer)**: A versioning scheme for software that uses a three-part format: MAJOR.MINOR.PATCH.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 112: Model Catalog and Metadata Management
 
-# Day 100: Day 100: AI Infra System Design Topic 100
+**1) Topic and Core Examination Areas**
+- Topic: Model Catalog and Metadata Management.
+- Core Examination Areas: Storing and querying model metadata, including hyperparameters, training data info, and performance metrics.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Metadata Fields**: Model name, version, framework (PyTorch, TensorFlow), parameter count, training dataset, evaluation metrics, author, creation date.
+- **Query Latency**: Time to search or retrieve model metadata from the registry. Target < 100ms for catalog queries.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Metadata Store**: A database (e.g., PostgreSQL, MongoDB) or a specialized ML metadata store (e.g., MLflow Metadata, Kubeflow Metadata).
+- **Catalog Interface**: A UI or API that allows users to search, filter, and view model metadata and versions.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **MLflow Model Registry**: Tracks model versions, metadata, and stages. Integrates with MLflow Tracking for experiment metadata.
+- **Hugging Face Hub**: A community model registry with metadata, datasets, and spaces. Uses Git-like versioning for model files.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Custom Metadata Store vs. Existing Tools*: Custom stores offer full control but require maintenance. Existing tools (MLflow, Hugging Face) are mature but may not fit all enterprise governance requirements.
+- *Structured vs. Unstructured Metadata*: Structured metadata (database fields) is easy to query. Unstructured (JSON blobs) is flexible but harder to search.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use MLflow Model Registry or Hugging Face Hub for most use cases. Ensure metadata includes hyperparameters, dataset versions, and evaluation metrics. Use structured fields for searchable attributes and JSON for extensible metadata.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **MLflow**: An open-source platform for managing the end-to-end machine learning lifecycle, including tracking, packaging, and deployment.
+- **Kubeflow Metadata**: A component of Kubeflow that tracks metadata about machine learning experiments and models.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 101: Day 101: AI Infra System Design Topic 101
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 113: Model Lineage and Provenance Tracking
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Model Lineage and Provenance Tracking.
+- Core Examination Areas: Tracking the origin of models, including the data, code, and experiments that led to a specific model version.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Lineage Graph**: A directed graph showing relationships between data, code, experiments, and model versions.
+- **Provenance**: The history of a model's creation, including training data version, hyperparameters, and training job ID.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Lineage Tracking System**: Integrates with experiment tracking (MLflow, Weights & Biases) and data versioning tools (DVC, LakeFS) to build a lineage graph.
+- **Metadata Links**: Model metadata includes references to training dataset version, code commit hash, and experiment ID.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **DVC (Data Version Control)**: A tool for versioning data and machine learning models, integrating with Git for code versioning.
+- **Weights & Biases (W&B) Artifacts**: W&B's feature for versioning and tracking datasets, models, and other artifacts through experiments.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Automated vs. Manual Lineage Tracking*: Automated tracking reduces human error but requires integration with all training pipelines. Manual tracking is flexible but prone to omissions.
+- *Granularity of Lineage*: Fine-grained lineage (tracking every data file and code change) provides completeness but increases storage and complexity.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use integrated tools like MLflow or W&B that automatically link experiments, datasets, and model versions. Ensure the lineage includes data version, code commit hash, hyperparameters, and evaluation metrics for each model version.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **DVC (Data Version Control)**: An open-source version control system for data and machine learning models, designed to work with Git.
+- **Weights & Biases (W&B)**: A platform for machine learning experiment tracking, visualization, and collaboration.
 
 ---
 
-# Day 102: Day 102: AI Infra System Design Topic 102
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 114: Model Evaluation Metrics Registry and A/B Testing Integration
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Model Evaluation Metrics Registry and A/B Testing Integration.
+- Core Examination Areas: Storing and comparing model evaluation metrics, and integrating the registry with A/B testing frameworks for model deployment.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Evaluation Metrics**: Accuracy, F1-Score, BLEU, ROUGE, latency (TTFT, TP99), throughput (TPS).
+- **A/B Testing**: A method of comparing two model versions (A and B) by routing a portion of traffic to each and comparing metrics.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Metrics Registry**: A database or service that stores evaluation metrics for each model version, enabling comparison across versions.
+- **A/B Testing Gateway**: A routing layer (e.g., Istio, custom load balancer) that splits traffic between model versions based on configuration.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Istio Service Mesh**: Can route traffic between different versions of a model serving service based on weights or headers.
+- **Feature Flags**: Use feature flag services (e.g., LaunchDarkly) to enable or disable model versions for specific user segments.
 
+**5) Trade-off analysis**
+- *A/B Testing vs. Canary Deployment*: A/B testing compares two versions for a specific metric (e.g., conversion rate). Canary deployment gradually rolls out a new version to all users while monitoring for errors.
+- *In-Band vs. Out-of-Band Evaluation*: In-band evaluation happens during A/B testing with real traffic. Out-of-band uses offline benchmark datasets, which is faster but may not reflect real-world performance.
 
----
+**6) How to determine the optimal solution**
+- Store evaluation metrics from both offline benchmarks and online A/B testing in the model registry. Use canary deployments for initial rollout, followed by A/B testing to compare key business metrics before promoting a model to production.
 
-# Day 103: Day 103: AI Infra System Design Topic 103
+**7) Full names and explanations of all nouns and abbreviations**
+- **F1-Score**: The harmonic mean of precision and recall, offering a single metric that balances both concerns.
+- **Istio**: An open-source service mesh that provides traffic management, security, and observability features.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 115: Model Governance, Compliance, and Security in Registries
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Model Governance, Compliance, and Security in Registries.
+- Core Examination Areas: Ensuring models meet regulatory requirements, access control, and security best practices in model registries.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Access Control**: Role-Based Access Control (RBAC) for registry operations (view, upload, deploy).
+- **Compliance Standards**: GDPR, HIPAA, SOC 2, depending on the data and model use case.
+- **Audit Logging**: Record of all registry operations (model upload, version change, deployment). Target 100% coverage for compliance.
 
+**3) Core Architecture/Technical Component Design**
+- **Registry Security Architecture**: Authentication (OAuth, SAML), Authorization (RBAC), Encryption at rest and in transit.
+- **Governance Workflow**: Model review process before promotion to Production stage in the registry.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **RBAC (Role-Based Access Control)**: Permissions are assigned based on user roles (e.g., Viewer, Uploader, Deployer).
+- **Encryption Standards**: AES-256 for data at rest, TLS 1.3 for data in transit.
 
-# Day 104: Day 104: AI Infra System Design Topic 104
+**5) Trade-off analysis**
+- *Strict Governance vs. Agility*: Strict review processes ensure compliance and quality but slow down model deployment. Lighter governance enables speed but increases risk.
+- *Centralized vs. Decentralized Governance*: Centralized governance ensures consistency but can become a bottleneck. Decentralized allows teams to move fast but may lead to inconsistencies.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Implement RBAC and audit logging in the model registry. Require a review workflow for models promoted to Production. Use encryption for model artifacts and metadata. Balance governance speed with compliance requirements based on organizational risk tolerance.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **RBAC (Role-Based Access Control)**: A method of regulating access to computer or network resources based on the roles of individual users within an organization.
+- **GDPR (General Data Protection Regulation)**: A regulation in EU law on data protection and privacy.
+- **HIPAA (Health Insurance Portability and Accountability Act)**: US legislation providing data privacy and security provisions for safeguarding medical information.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 116: Model Registry Integration with CI/CD and MLOps Pipelines
 
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry Integration with CI/CD and MLOps Pipelines.
+- Core Examination Areas: Automating model training, evaluation, and deployment using CI/CD practices and MLOps tools.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **MLOps (Machine Learning Operations)**: Practices that combine machine learning, DevOps, and data engineering to streamline model development and deployment.
+- **Pipeline Success Rate**: Target > 95% success rate for automated training and deployment pipelines.
 
-# Day 105: Day 105: AI Infra System Design Topic 105
+**3) Core Architecture/Technical Component Design**
+- **MLOps Pipeline Architecture**: Data ingestion -> Training -> Evaluation -> Registry registration -> Deployment.
+- **CI/CD for ML**: Use GitHub Actions, GitLab CI, or Jenkins to trigger training jobs upon code or data changes, and register models that pass evaluation thresholds.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Kubeflow Pipelines**: A platform for building and deploying portable, scalable machine learning workflows based on Docker containers.
+- **GitHub Actions / GitLab CI**: CI/CD tools that can trigger training scripts and interact with model registry APIs.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Custom CI/CD vs. MLOps Platforms*: Custom pipelines offer flexibility but require maintenance. MLOps platforms (Kubeflow, MLflow) provide integrated workflows but may have a steeper learning curve.
+- *Automated vs. Manual Deployment*: Automated deployment via CI/CD is fast and consistent but requires robust testing and governance to prevent bad models from reaching production.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Integrate the model registry with your existing CI/CD system or use an MLOps platform like MLflow or Kubeflow. Ensure pipelines include automated evaluation steps and only register models that meet performance thresholds. Use canary deployments for initial model releases.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **MLOps (Machine Learning Operations)**: A set of practices that aims to deploy and maintain machine learning models reliably in production.
+- **Docker**: A platform for developing, shipping, and running applications in containers.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 117: Model Registry for Multimodal Models and Large Language Models
 
-# Day 106: Day 106: AI Infra System Design Topic 106
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry for Multimodal Models and Large Language Models.
+- Core Examination Areas: Specific considerations for registering and versioning VLMs and LLMs, including artifact size, framework dependencies, and serving configurations.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Artifact Size**: LLM/VLM artifacts can be 14GB (7B model in BF16) to 140GB+ (70B model). Registry storage must handle large files.
+- **Framework Dependencies**: PyTorch version, CUDA version, transformer library version (e.g., Hugging Face `transformers` 4.36+).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Large Artifact Storage**: Integrate the registry with object storage (S3, GCS) or distributed file systems for model weights, storing only metadata and pointers in the registry database.
+- **Serving Configuration Metadata**: Store inference engine (vLLM, TensorRT-LLM), parallelism settings (TP, PP), and batch size configurations in the registry.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Hugging Face Hub**: Handles large model files via Git LFS (Large File Storage) or direct S3 integration.
+- **MLflow with S3 Backend**: Stores model artifacts in S3 while metadata is in a database.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Registry-Stored vs. External-Stored Artifacts*: Storing artifacts in the registry database is simple but doesn't scale for large LLM files. Using external storage (S3) with registry pointers scales better but requires managing access to the storage.
+- *Framework Locking vs. Flexibility*: Locking to specific framework versions ensures reproducibility but may limit serving options. Flexible registries allow multiple serving frameworks but require more metadata.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use a model registry that supports external artifact storage (e.g., MLflow with S3, Hugging Face Hub). Store serving configurations (inference engine, parallelism, batch size) as metadata to ensure consistent deployment across environments.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **Git LFS (Large File Storage)**: A Git extension for versioning large files, such as images, videos, and machine learning models.
+- **CUDA (Compute Unified Device Architecture)**: A parallel computing platform and API model created by NVIDIA, allowing software to use certain types of GPU for general purpose processing.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 107: Day 107: AI Infra System Design Topic 107
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 118: Model Deployment Registry: Routing, Canary, Blue-Green Deployments
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Model Deployment Registry: Routing, Canary, Blue-Green Deployments.
+- Core Examination Areas: Strategies for deploying model versions from the registry to serving infrastructure, including traffic routing and rollout strategies.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Canary Deployment**: Releasing a new model version to a small percentage of traffic (e.g., 5%) before full rollout.
+- **Blue-Green Deployment**: Running two identical production environments (Blue and Green), switching traffic from Blue to Green upon successful validation of the new version.
+- **Routing Latency**: Time added by the routing layer. Target < 5ms overhead for model serving routing.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Deployment Registry**: Tracks which model version is active in which environment (Development, Staging, Production).
+- **Routing Layer**: A service or proxy (e.g., Istio, API Gateway) that routes requests to the appropriate model serving instance based on version or stage.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Istio Virtual Services**: Can route traffic between different model serving deployments based on weight or header conditions.
+- **Kubernetes Deployments**: Use Kubernetes deployment objects for model serving, with labels indicating model version, enabling rolling updates or blue-green setups.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Canary vs. Blue-Green*: Canary deployments allow gradual traffic increase and real-world testing but require monitoring infrastructure. Blue-green deployments allow instant rollback but require double the infrastructure during the switch.
+- *Proxy Routing vs. Application-Level Routing*: Proxy routing (Istio) is transparent to the model serving code but adds infrastructure complexity. Application-level routing is simpler but requires code changes.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use Kubernetes deployments with Istio or a similar service mesh for routing. Implement canary deployments for new model versions to validate performance and business metrics before full rollout. Use blue-green for critical models where instant rollback is required.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **API Gateway**: A server that acts as an API front-end, receiving API requests, enforcing throttling and security policies, and passing requests to the appropriate backend service.
+- **Kubernetes Deployments**: A Kubernetes resource that manages the deployment of a replicated set of pods, supporting rolling updates and rollbacks.
 
 ---
-
-# Day 108: Day 108: AI Infra System Design Topic 108
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+================================================================================
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+### Day 119: Model Registry Scalability and Distributed Consistency (e.g., etcd, Consul)
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry Scalability and Distributed Consistency.
+- Core Examination Areas: Ensuring the model registry can handle high concurrency, multiple writes, and maintains consistency across distributed components.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**2) Requirement Clarification and Metric Definitions**
+- **Concurrency**: Number of simultaneous registry operations (upload, version update, deployment change). Target > 1000 operations per second for large enterprises.
+- **Consistency Model**: Strong consistency vs. Eventual consistency. Registry metadata updates should have strong consistency to prevent race conditions in deployment.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**3) Core Architecture/Technical Component Design**
+- **Registry Database**: A distributed database or key-value store (e.g., PostgreSQL with read replicas, etcd, Consul) for metadata.
+- **Artifact Storage**: Object storage (S3) for model files, which is eventually consistent but highly scalable.
 
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **etcd**: A distributed key-value store used by Kubernetes for cluster state. Can be used for registry metadata with strong consistency.
+- **Consul**: A service mesh solution offering service discovery, configuration, and segmentation features, with a distributed consensus algorithm.
 
----
+**5) Trade-off analysis**
+- *Strong vs. Eventual Consistency*: Strong consistency prevents race conditions (e.g., two deployments of the same version) but can reduce availability or performance. Eventual consistency scales better but requires conflict resolution mechanisms.
+- *Database vs. Key-Value Store*: Relational databases (PostgreSQL) offer rich querying and transactions. Key-value stores (etcd) offer high performance and consistency for simple metadata but less flexible querying.
 
-# Day 109: Day 109: AI Infra System Design Topic 109
+**6) How to determine the optimal solution**
+- Use a relational database with transaction support (PostgreSQL) or a distributed key-value store with strong consistency (etcd) for registry metadata. Ensure model artifact storage uses a highly scalable object storage system. Implement version locking or optimistic concurrency control to prevent deployment race conditions.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**7) Full names and explanations of all nouns and abbreviations**
+- **etcd**: A distributed reliable key-value store for the most critical data of a distributed system, commonly used by Kubernetes.
+- **Optimistic Concurrency Control**: A concurrency control method that assumes multiple transactions can complete without conflicting, and checks for conflicts only at commit time.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+---
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+================================================================================
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+### Day 120: Model Registry Deep Dive: Open Source vs. Commercial Registries (Hugging Face, MLflow, Weights & Biases, AWS SageMaker Model Registry)
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**1) Topic and Core Examination Areas**
+- Topic: Model Registry Deep Dive: Open Source vs. Commercial Registries.
+- Core Examination Areas: Comparison of popular model registry solutions, their features, strengths, and use cases.
 
+**2) Requirement Clarification and Metric Definitions**
+- **Open Source Registries**: MLflow Model Registry, Hugging Face Hub (open components), Weights & Biases (free tier + paid).
+- **Commercial/Cloud Registries**: AWS SageMaker Model Registry, Google Vertex AI Model Registry, Azure ML Model Registry.
+- **Feature Parity**: Versioning, metadata, staging, lineage, CI/CD integration.
 
----
+**3) Core Architecture/Technical Component Design**
+- **MLflow Model Registry**: Python library with a tracking server and registry UI. Stores metadata in a database (SQLite, PostgreSQL) and artifacts in local file system or S3.
+- **Hugging Face Hub**: Git-based versioning for model files, with a web UI and Python `huggingface_hub` library for programmatic access.
+- **AWS SageMaker Model Registry**: Integrated with AWS services, supports model packages, approval workflows, and integration with SageMaker Model Monitor and Endpoints.
 
-# Day 110: Day 110: AI Infra System Design Topic 110
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **MLflow**: Best for open-source, self-hosted MLOps pipelines. Highly customizable but requires infrastructure management.
+- **Hugging Face Hub**: Best for community models, pre-trained VLMs/LLMs, and datasets. Strong ecosystem but less focused on enterprise governance workflows.
+- **Cloud Registries (SageMaker, Vertex AI)**: Best for teams already in the cloud ecosystem. Offer integrated governance, monitoring, and deployment but can be vendor-locked.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**5) Trade-off analysis**
+- *Open Source vs. Commercial*: Open source offers flexibility and no vendor lock-in but requires self-hosting and maintenance. Commercial registries offer managed services and integrations but may incur costs and lock-in.
+- *Community vs. Enterprise Focus*: Hugging Face is community and research-focused. MLflow and cloud registries are more enterprise and production-focused.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**6) How to determine the optimal solution**
+- For research and community sharing, use Hugging Face Hub. For self-hosted MLOps pipelines with full control, use MLflow Model Registry. For teams already using a specific cloud provider (AWS, GCP, Azure), use their native model registry (SageMaker, Vertex AI, Azure ML) for integrated governance and deployment workflows.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**7) Full names and explanations of all nouns and abbreviations**
+- **AWS SageMaker**: A fully managed service provided by Amazon Web Services that enables developers and data scientists to prepare, build, train, and deploy machine learning models.
+- **Google Vertex AI**: A managed machine learning platform on Google Cloud that provides tools for building, deploying, and scaling ML models.
+- **Azure ML (Azure Machine Learning)**: A cloud service for accelerating and managing the machine learning lifecycle, offered by Microsoft Azure.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 121: Introduction to AI Cluster Network Architecture & RDMA Basics
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to AI Cluster Network Architecture & RDMA Basics.
+- Core Examination Areas: Understanding the role of network architecture in AI training clusters, basic concepts of Remote Direct Memory Access (RDMA), and how RDMA reduces CPU overhead in distributed training.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **QPS (Queries Per Second)**: In training, not directly applicable, but for distributed sync it relates to synchronization frequency (e.g., 100 syncs/sec for 10-second gradient steps).
+- **Latency Metrics (RTT - Round Trip Time)**: Target RTT for intra-node is <1 microsecond (us); for inter-node RDMA networks, target RTT is <1.5 us.
+- **Throughput (Bandwidth)**: Target network bandwidth per node for 8-GPU servers is 400 Gbps or 800 Gbps per NIC.
+- **Memory Size (HBM - High Bandwidth Memory)**: GPU HBM3 size is typically 80GB-192GB per GPU; network buffers rely on host DRAM and NIC on-board memory.
 
+**3) Core Architecture/Technical Component Design**
+- Compute Nodes: GPU servers (e.g., 8x H100) with dual or quad 400G/800G RDMA-capable NICs.
+- Network Switches: RDMA switches (InfiniBand or RoCEv2 switches) forming a multi-tier fabric.
+- RDMA Protocols: IB (InfiniBand) native or RoCEv2 (RDMA over Converged Ethernet) running on lossless Ethernet.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *RDMA vs Traditional TCP/IP*: Traditional TCP requires CPU intervention for data movement (kernel bypass needed). RDMA allows direct memory-to-memory transfer between nodes without CPU or OS kernel involvement, reducing latency and CPU overhead.
+- *RDMA Operations*: Read, Write, Send/Receive, Atomic operations. In AI training, Send/Receive and Read/Write are used for All-Reduce and parameter sync.
 
-# Day 111: Day 111: AI Infra System Design Topic 111
+**5) Trade-off analysis**
+- *RDMA (InfiniBand/RoCEv2) vs TCP*: RDMA offers lower latency and higher throughput but requires specialized hardware (IB switches or RoCEv2-capable Ethernet with PFC/ECN). TCP runs on standard Ethernet but has higher CPU overhead and latency.
+- *Cost vs Performance*: InfiniBand offers the best out-of-the-box performance for AI but is more expensive and proprietary. RoCEv2 runs on standard Ethernet switches but requires careful configuration for lossless networking.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For large-scale LLM training (thousands of GPUs), InfiniBand or high-end RoCEv2 (800G) with proper congestion control is optimal. For smaller clusters or cost-sensitive deployments, RoCEv2 on lossless Ethernet or even high-end TCP (with MPATH/TCP BBR) may suffice.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **RDMA**: Remote Direct Memory Access — allows data to be transferred directly from the memory of one computer to that of another without involvement of the operating system or CPU of either computer.
+- **RTT**: Round Trip Time — the time it takes for a signal to be sent plus the time it takes for an acknowledgment of that signal to be received.
+- **HBM**: High Bandwidth Memory — a type of computer memory that uses 3D stacking to provide higher bandwidth than traditional GDDR memory.
+- **NIC**: Network Interface Card — hardware that connects a computer to a computer network.
+- **RoCEv2**: RDMA over Converged Ethernet version 2 — carries RDMA traffic over IP networks.
+- **InfiniBand (IB)**: A high-performance networking technology primarily used in high-performance computing and enterprise data centers.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 122: InfiniBand vs RoCEv2 vs TCP in AI Clusters
 
+**1) Topic and Core Examination Areas**
+- Topic: InfiniBand vs RoCEv2 vs TCP in AI Clusters.
+- Core Examination Areas: Comparative analysis of IB, RoCEv2, and TCP for AI workloads, focusing on latency, throughput, ecosystem, and configuration complexity.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Latency (Tail Latency TP99)**: Target TP99 latency for collective operations (e.g., All-Reduce) should be <100 microseconds at scale.
+- **Throughput (TPS/Bandwidth)**: Target line-rate bandwidth of 400 Gbps or 800 Gbps per link. Packet loss rate should be <10^-5 for RoCEv2/IB to avoid TCP/RDMA retransmissions.
+- **QPS/Sync Rate**: Gradient synchronization frequency, e.g., 50-200 syncs per second depending on model size and batch size.
 
-# Day 112: Day 112: AI Infra System Design Topic 112
+**3) Core Architecture/Technical Component Design**
+- InfiniBand Architecture: Dedicated IB switches (e.g., NVIDIA Quantum), IB HCAs (Host Channel Adapters), and IB cables.
+- RoCEv2 Architecture: RDMA-capable Ethernet NICs (e.g., Mellanox/NVIDIA ConnectX), top-of-rack (ToR) switches supporting PFC (Priority Flow Control) and ECN (Explicit Congestion Notification).
+- TCP Architecture: Standard Ethernet NICs, IP routing, TCP stack optimizations (e.g., RDMA over TCP alternatives like Soft-RoCE or MP-RDMA).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *InfiniBand*: Proprietary network protocol and hardware stack. Offers zero-copy, kernel bypass, and hardware-managed congestion control.
+- *RoCEv2*: Runs RDMA over UDP/IP. Requires a lossless Ethernet network configured with PFC (to prevent buffer overflow) and ECN (to signal congestion).
+- *TCP with AI optimizations*: Uses standard Ethernet but relies on software optimizations like MPATH (multipath TCP), BBR congestion control, and kernel bypass libraries (e.g., SPDK, AF_XDP).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *InfiniBand*: Highest performance, lowest latency, but high cost and vendor lock-in (primarily NVIDIA/Mellanox).
+- *RoCEv2*: Lower hardware cost (uses Ethernet), but requires expert tuning for lossless networking (PFC deadlocks, ECN tuning).
+- *TCP*: Lowest hardware cost, universally compatible, but higher CPU overhead and latency, not ideal for ultra-large scale LLM training without significant software optimization.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For >1,000 GPUs training LLMs, InfiniBand or carefully tuned RoCEv2 (800G) is required. For <500 GPUs or fine-tuning workloads, RoCEv2 or even high-performance TCP may be sufficient.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **IB**: InfiniBand — high-throughput, low-latency network protocol.
+- **RoCEv2**: RDMA over Converged Ethernet version 2.
+- **PFC**: Priority Flow Control — a link-level flow control mechanism in Ethernet to pause specific traffic classes to prevent packet loss.
+- **ECN**: Explicit Congestion Notification — a mechanism to signal impending network congestion before buffers overflow.
+- **HCA**: Host Channel Adapter — the InfiniBand equivalent of a NIC.
+- **ToR**: Top-of-Rack — network switches located at the top of a server rack.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 123: Network Topologies for AI Training (Fat-Tree, Dragonfly, Torus)
 
-# Day 113: Day 113: AI Infra System Design Topic 113
+**1) Topic and Core Examination Areas**
+- Topic: Network Topologies for AI Training.
+- Core Examination Areas: Understanding common network topologies (Fat-Tree, Dragonfly, Torus/3D Torus), their scalability, bisection bandwidth, and fault tolerance.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Bisection Bandwidth**: The minimum bandwidth available to cut the network into two halves. For AI training, bisection bandwidth should match or exceed aggregate compute bandwidth (e.g., for 64x 800G GPUs, bisection bandwidth >= 32x 800G).
+- **Network Diameter**: The maximum number of hops between any two nodes. Target diameter for Fat-Tree is 3 or 5 hops.
+- **Scale**: Number of GPUs supported (e.g., 8K, 32K GPUs).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *Fat-Tree Topology*: A multi-tier switch architecture (leaf, spine, core) ensuring non-blocking communication and equal-cost multi-path (ECMP) routing.
+- *Dragonfly Topology*: A hierarchical topology with high-degree routers, optimizing for large-scale clusters by reducing the number of switches needed.
+- *3D Torus Topology*: Used in supercomputers (e.g., Summit, Frontier), where nodes are arranged in a 3D grid and connected to neighbors, optimizing for locality.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Fat-Tree*: Ensures bisection bandwidth equals total port bandwidth. Requires O(N^2) switches for N leaf nodes, making it expensive at massive scale but optimal for All-Reduce performance.
+- *Dragonfly*: Reduces switch count by using global and local groups. Can suffer from global congestion if not managed with adaptive routing and congestion control.
+- *Torus*: Excellent locality and low diameter for supercomputing, but less flexible for dynamic cluster scaling compared to Fat-Tree.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Fat-Tree vs Dragonfly*: Fat-Tree offers predictable, non-blocking performance but scales poorly in switch count. Dragonfly scales better in switch count but requires sophisticated routing and congestion control to avoid global congestion.
+- *Torus vs Tree*: Torus is great for tightly coupled HPC workloads with regular communication patterns, but AI training (All-Reduce across all nodes) benefits more from Fat-Tree's full bisection bandwidth.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For standard AI clusters up to a few thousand GPUs, Fat-Tree (e.g., 3-tier or 5-tier) is optimal. For 10K+ GPUs, Dragonfly or folded Clos topologies with adaptive routing are considered to manage switch count and cost.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **Bisection Bandwidth**: The minimum total bandwidth of links that must be cut to divide a network into two equal halves.
+- **ECMP**: Equal-Cost Multi-Path — a routing strategy that utilizes multiple available paths of a similar cost to a destination.
+- **Clos Network**: A multistage switch network topology, the Fat-Tree is a specific type of Clos network.
+- **Hops**: The number of network devices (routers/switches) a packet passes through from source to destination.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 114: Day 114: AI Infra System Design Topic 114
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 124: NVLink and NVSwitch: GPU-to-GPU Interconnects
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: NVLink and NVSwitch: GPU-to-GPU Interconnects.
+- Core Examination Areas: Understanding intra-node GPU communication, NVLink bandwidth, NVSwitch architecture, and how it replaces or complements PCIe for GPU-to-GPU data transfer.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Intra-node Bandwidth**: Target NVLink bandwidth for H100 is 900 GB/s (bidirectional) per GPU-to-GPU link. For an 8-GPU server with NVSwitch, aggregate bandwidth is ~4.3 TB/s.
+- **Latency**: NVLink latency is <1 microsecond for memory access across GPUs.
+- **Memory Size (HBM)**: Each H100 GPU has 80GB or 192GB HBM3; NVLink allows these to be virtually pooled or used for tensor/attention parallelism.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- NVLink: A direct GPU-to-GPU high-bandwidth interconnect. Each H100 GPU has multiple NVLink ports (e.g., 18 links of 56 GB/s each for bidirectional 900 GB/s).
+- NVSwitch: A chip that connects multiple GPUs within a server or across servers, forming a full-mesh intra-node (or intra-subnode) interconnect, eliminating PCIe as the bottleneck for GPU-to-GPU communication.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *NVLink vs PCIe*: PCIe Gen5 x16 provides ~32 GB/s bidirectional bandwidth per slot. NVLink provides 900 GB/s per GPU link pair, making it 20-30x faster for GPU-to-GPU data transfer.
+- *NVSwitch Fabric*: In an 8-GPU H100 server, NVSwitch connects all 8 GPUs in a full-mesh, allowing any GPU to communicate with any other GPU at NVLink speeds.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *NVLink/NVSwitch vs PCIe*: NVLink/NVSwitch offers vastly superior bandwidth and lower latency but is proprietary to NVIDIA and increases GPU/board cost. PCIe is universal and cheaper but becomes a bottleneck for large batch sizes or model parallelism within a node.
+- *Intra-node vs Inter-node*: NVLink handles intra-node (within server) communication; inter-node still relies on RDMA (IB/RoCEv2) or high-speed Ethernet.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For modern LLM training (DP/TP/PP parallelism), NVLink/NVSwitch is mandatory for intra-node communication. PCIe should only be used for host-GPU data loading or management traffic.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **NVLink**: NVIDIA's high-speed, direct-connected GPU interconnect technology.
+- **NVSwitch**: A switch chip designed by NVIDIA to connect multiple GPUs at NVLink speeds, forming a non-blocking fabric.
+- **HBM3**: High Bandwidth Memory version 3 — the latest generation of 3D-stacked memory used in modern GPUs.
+- **TP**: Tensor Parallelism — splitting a single model layer across multiple GPUs.
 
 ---
 
-# Day 115: Day 115: AI Infra System Design Topic 115
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 125: PCIe Gen5/Gen6 Architecture for GPU-Host Communication
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: PCIe Gen5/Gen6 Architecture for GPU-Host Communication.
+- Core Examination Areas: Understanding PCIe generations, bandwidth per lane, host-to-GPU and GPU-to-host data transfer patterns, and the role of PCIe in AI infra.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **PCIe Bandwidth**: PCIe Gen5 x16 provides ~32 GB/s bidirectional (64 GT/s per lane, 16 lanes). PCIe Gen6 x16 doubles this to ~64 GB/s bidirectional.
+- **Throughput (Host-GPU I/O)**: For data loading, target host-to-GPU transfer speed should match or exceed the GPU's ingestion rate (e.g., 10-20 GB/s for data pipelines).
+- **Latency**: PCIe access latency is ~1-5 microseconds for memory-mapped I/O.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- PCIe Root Complex: Located in the host CPU chipset, manages PCIe traffic between CPUs, GPUs, and other peripherals.
+- GPU PCIe Endpoints: Each GPU has a PCIe x16 interface connecting to the host motherboard.
+- Peer-to-Peer (P2P) PCIe: Allows GPUs to communicate directly over PCIe without going through the host CPU, though bandwidth is limited to PCIe speeds.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *PCIe Gen5 vs Gen4*: Gen5 offers 2 GT/s per lane per direction (128 GB/s x16 bidirectional), doubling Gen4's 64 GB/s x16. Gen6 doubles Gen5 again.
+- *PCIe vs NVLink*: PCIe is used for host-GPU communication (data loading, model weight loading). NVLink is for GPU-GPU communication within a node. PCIe cannot replace NVLink for GPU-GPU tensor parallelism due to bandwidth limitations.
 
+**5) Trade-off analysis**
+- *Upgrading PCIe vs Upgrading Network*: PCIe upgrades improve host-GPU data loading and model initialization but do not affect inter-node training communication (which uses RDMA). NVLink/NVSwitch is more critical for intra-node GPU-GPU sync.
+- *Cost vs Benefit*: PCIe Gen6 motherboards and CPUs are expensive and have limited ecosystem support compared to Gen4/Gen5.
 
----
+**6) How to determine the optimal solution**
+- For AI training servers, PCIe Gen5 x16 per GPU is the current standard for H100/H200. Ensure the host CPU and motherboard support PCIe Gen5 to avoid bottlenecks during data loading and model weight distribution.
 
-# Day 116: Day 116: AI Infra System Design Topic 116
+**7) Full names and explanations of all nouns and abbreviations**
+- **PCIe**: Peripheral Component Interconnect Express — a high-speed serial computer expansion bus standard.
+- **GT/s**: Giga Transfers per second — a measure of the number of data transfers per second on a serial bus.
+- **P2P**: Peer-to-Peer — direct communication between two devices (e.g., GPU-to-GPU) without involving the host CPU.
+- **Root Complex**: The PCIe component that initiates transactions on the PCIe fabric, typically integrated into the host CPU chipset.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 126: Congestion Control in RDMA/RoCEv2 (ECN, PFC, DCQCN)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Congestion Control in RDMA/RoCEv2.
+- Core Examination Areas: Understanding network congestion in RDMA/Ethernet, PFC (Priority Flow Control), ECN (Explicit Congestion Notification), and DCQCN (Data Center Quantized Congestion Notification).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Packet Loss Rate**: Target <10^-5 for RoCEv2/IB networks. Even 0.1% packet loss can cause severe throughput degradation in RDMA due to retransmissions.
+- **Buffer Size**: Switch on-chip buffers should be sized to absorb micro-bursts (e.g., 1-2 ms of line-rate traffic, ~100-200 MB for 800G switches).
+- **Latency Spikes**: Tail latency (TP99) should not exceed 1-2x the base RTT during congestion events.
 
+**3) Core Architecture/Technical Component Design**
+- *PFC (Priority Flow Control)*: A link-level mechanism that pauses specific traffic classes (priorities) when a switch port's buffer reaches a threshold.
+- *ECN (Explicit Congestion Notification)*: Marks packets instead of dropping them when congestion is detected, allowing receivers to signal senders to reduce rate.
+- *DCQCN*: A congestion control algorithm for RoCEv2 that combines PFC and ECN to achieve high throughput and low latency without deadlocks.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *PFC Deadlocks*: If multiple ports pause each other, a PFC storm or deadlock can occur, halting all traffic. Solutions include PFC watchdogs, asymmetric PFC, or ECN-based congestion control (DCQCN) which minimizes PFC usage.
+- *ECN + DCQCN*: ECN marks packets when buffer occupancy crosses a threshold. The receiver echoes the ECN mark back to the sender via RDMA headers. The sender reduces its transmission rate, avoiding PFC pauses.
 
-# Day 117: Day 117: AI Infra System Design Topic 117
+**5) Trade-off analysis**
+- *PFC-heavy vs ECN-heavy*: PFC provides immediate pause but risks deadlocks and global flow stalling. ECN is smoother and avoids deadlocks but requires precise tuning of marking thresholds and sender rate reduction algorithms.
+- *Complexity vs Reliability*: DCQCN is complex to tune (ECN thresholds, PFC high/low watermarks) but provides the most reliable performance for AI workloads at scale.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For production RoCEv2 AI clusters, use DCQCN with carefully tuned ECN marks and minimal PFC usage. Avoid PFC-only configurations to prevent PFC deadlocks. Regularly run congestion benchmarking tools (e.g., `rcache`, `pfc-starve-test`).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **DCQCN**: Data Center Quantized Congestion Notification — an RDMA congestion control algorithm for RoCEv2 networks.
+- **PFC Storm**: A condition where PFC pauses cascade across switches, causing network paralysis.
+- **Watermark**: A buffer occupancy threshold that triggers PFC or ECN actions (low watermark to resume, high watermark to pause/mark).
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 127: Network Switches and Routers in AI Clusters (Spectrum, Tomahawk)
 
+**1) Topic and Core Examination Areas**
+- Topic: Network Switches and Routers in AI Clusters.
+- Core Examination Areas: Understanding key switch chip families (NVIDIA Spectrum for IB/Ethernet, Tomahawk for Ethernet), port densities, and switching architectures for AI workloads.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Switch Port Density**: Target 64 or 128 ports of 400G or 800G per switch.
+- **Switching Capacity**: For a 64-port 800G switch, switching capacity should be >= 102.4 Tbps (full duplex).
+- **Buffer per Port**: Switch on-chip memory per port should be >= 140 MB to handle RDMA/RoCEv2 micro-bursts without packet loss.
 
-# Day 118: Day 118: AI Infra System Design Topic 118
+**3) Core Architecture/Technical Component Design**
+- *InfiniBand Switches*: NVIDIA Quantum-2 or Spectrum-X IB switches, providing non-blocking IB fabric with hardware congestion control.
+- *Ethernet Switches*: NVIDIA Spectrum-4/5 or Broadcom Tomahawk 4/5 switches, supporting RoCEv2, PFC, ECN, and high port densities (64x400G or 32x800G).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Spectrum vs Tomahawk*: Spectrum series is NVIDIA's switch chip family optimized for both IB and RoCEv2, with tight integration into the NVIDIA AI stack (NCCL, cuNet). Tomahawk is Broadcom's high-density Ethernet switch chip, widely used in general data centers and increasingly for RoCEv2 AI clusters.
+- *Time-Sensitive Networking (TSN)*: Some advanced switches support TSN features for deterministic latency, though AI clusters primarily rely on RDMA congestion control rather than TSN.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *NVIDIA Spectrum vs Broadcom Tomahawk*: Spectrum offers better out-of-the-box integration with NVIDIA GPUs and NCCL, but Tomahawk switches are often more cost-effective and have a broader third-party ecosystem.
+- *IB Switches vs Ethernet Switches*: IB switches are purpose-built for RDMA and AI, offering lower latency and simpler configuration for lossless networks. Ethernet switches are more versatile and cheaper but require careful RoCEv2 tuning.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For NVIDIA-dominated AI clusters (H100/H200), Spectrum switches (IB or Ethernet) are optimal for seamless NCCL integration. For multi-vendor or cost-optimized clusters, Tomahawk-based RoCEv2 switches with DCQCN are viable.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **NCCL**: NVIDIA Collective Communications Library — a library providing standard communications primitives for distributed GPU training.
+- **cuNet**: NVIDIA's network profiling and optimization library for RDMA/Ethernet.
+- **TSN**: Time-Sensitive Networking — a set of IEEE standards for deterministic communication over Ethernet.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 128: All-Reduce Communication Patterns and Network Overhead
 
-# Day 119: Day 119: AI Infra System Design Topic 119
+**1) Topic and Core Examination Areas**
+- Topic: All-Reduce Communication Patterns and Network Overhead.
+- Core Examination Areas: Understanding the All-Reduce operation, algorithmic implementations (Ring All-Reduce, Tree All-Reduce), and their impact on network bandwidth and latency.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Gradient Size**: For a 70B parameter model with FP8 gradients, gradient size is ~70GB. All-Reduce must complete within the gradient computation time (e.g., 5-10 seconds) to avoid idle GPU time.
+- **Theoretical All-Reduce Time**: For Ring All-Reduce, time = (2 * (N-1) / N) * (Data Size / Bandwidth per link), where N is the number of GPUs.
+- **Network Utilization**: Target >80% effective bandwidth utilization during All-Reduce operations.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *Ring All-Reduce*: GPUs are arranged in a logical ring. Each GPU sends and receives data from its neighbors in multiple stages (scatter-reduce and all-gather).
+- *Tree All-Reduce*: Uses a hierarchical tree structure (rooted tree or binomial tree) to aggregate and broadcast data, reducing the number of hops per GPU.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Ring vs Tree All-Reduce*: Ring All-Reduce maximizes link utilization and scales well with uniform bandwidth. Tree All-Reduce can have lower latency for small data sizes but may suffer from bottleneck at the root node in non-uniform networks.
+- *NCCL Implementations*: NCCL automatically selects the optimal All-Reduce algorithm (Ring, Tree, or Hybrid) based on network topology and data size.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Ring vs Tree*: Ring is bandwidth-optimal for large data (typical in LLM training) but has latency proportional to N. Tree has latency proportional to log(N) but may not fully utilize all links simultaneously.
+- *Hybrid Approaches*: For large clusters, a combination of intra-node Ring (via NVLink) and inter-node Tree or Ring (via RDMA) is used to optimize both bandwidth and latency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For LLM training with large gradient sizes (>1GB), Ring All-Reduce or NCCL's auto-tuned hybrid approach is optimal. Ensure the network bisection bandwidth matches the aggregate GPU bandwidth to avoid All-Reduce becoming the bottleneck.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **All-Reduce**: A collective communication operation where each node provides a buffer of data; the operation computes the reduction (e.g., sum) of all buffers and distributes the result back to all nodes.
+- **FP8**: 8-bit Floating Point — a low-precision data format used to reduce memory and bandwidth requirements in AI training and inference.
+- **Scatter-Reduce**: A two-step process where data is first scattered across nodes and reduced, followed by an all-gather step.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 120: Day 120: AI Infra System Design Topic 120
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 129: Network Performance Measurement and Benchmarking (NCCL tests, osu_bw)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Network Performance Measurement and Benchmarking.
+- Core Examination Areas: Understanding how to measure and benchmark AI cluster network performance using tools like NCCL tests, OSU Micro-Benchmarks, and iperf3.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Benchmark Target Bandwidth**: For 800G RoCEv2/IB, measured effective bandwidth should be >= 750 Gbps (>=93% of line rate) for large message sizes (e.g., 16MB+).
+- **Latency Benchmark**: Point-to-point latency for small messages (e.g., 64 bytes) should be <10 microseconds for RDMA.
+- **Packet Drop Rate**: Should be 0% during benchmarking; non-zero drops indicate network misconfiguration or congestion.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- *NCCL Tests*: NVIDIA's benchmark suite for collective communications (All-Reduce, Broadcast, Reduce-Scatter, etc.) across multiple GPUs and nodes.
+- *OSU Micro-Benchmarks (osu_bw, osu_latency)*: Standard RDMA/Ethernet benchmarks for measuring point-to-point bandwidth and latency using RDMA Read/Write or Send/Receive.
+- *iperf3*: A TCP/UDP network performance measurement tool, useful for baseline Ethernet testing but not RDMA-specific.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *NCCL vs OSU*: NCCL tests measure the actual performance of the collective operations used in AI training (All-Reduce, etc.) and include GPU memory copy overhead. OSU benchmarks measure raw RDMA/Ethernet bandwidth and latency without GPU compute overhead.
+- *Message Size Variations*: Benchmarks should be run across a range of message sizes (64B, 256B, 4KB, 1MB, 16MB) to understand performance characteristics for different communication patterns (control signals vs gradient syncs).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *NCCL Tests vs Raw RDMA Benchmarks*: NCCL tests are more representative of actual training workloads but include GPU and library overhead. OSU benchmarks isolate the network stack performance. Both are needed for comprehensive validation.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Run OSU benchmarks to validate the RDMA/Ethernet fabric (bandwidth, latency, packet loss). Run NCCL tests (e.g., `nccl-tests/allreduce_perf`) to validate the end-to-end GPU-to-GPU collective communication performance. Tune PFC/ECN or NCCL settings based on benchmark results.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **OSU Micro-Benchmarks**: A suite of networking benchmarks developed by Ohio Supercomputer Center, including `osu_bw` (bandwidth) and `osu_latency` (latency).
+- **iperf3**: A tool for active measurements of the maximum achievable bandwidth on IP networks.
+- **Collective Communications**: Communication patterns where multiple processes participate simultaneously (e.g., Broadcast, Scatter, Gather, All-Reduce).
 
 ---
 
-## DAYS-121-150
 
-# Day 121: Day 121: AI Infra System Design Topic 121
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+================================================================================
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+### Day 130: Network Fault Tolerance and Recovery in AI Clusters
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
+**1) Topic and Core Examination Areas**
+- Topic: Network Fault Tolerance and Recovery in AI Clusters.
+- Core Examination Areas: Understanding network failure modes (NIC failure, switch failure, cable issues), detection mechanisms, and recovery strategies in AI training clusters.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
+**2) Requirement Clarification and Metric Definitions**
+- **MTBF (Mean Time Between Failures)**: Target network component MTBF should be >500,000 hours for switches and NICs.
+- **Recovery Time**: Time to detect and recover from a network link failure should be <1 second to minimize training job disruption.
+- **Job Completion Rate**: Target >95% job completion rate for long-running training jobs (weeks to months) despite network faults.
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+**3) Core Architecture/Technical Component Design**
+- *Redundant Paths*: Fat-Tree and Clos topologies provide multiple paths between any two nodes. If a link or switch fails, ECMP or adaptive routing can reroute traffic.
+- *Health Checking*: RDMA/IB networks use link layer health checks (e.g., IB Link Down/Up events). RoCEv2 networks use PFC/ECN status and ping-like RDMA probes.
+- *NCCL Fault Tolerance*: NCCL can detect failed ranks and attempt to reinitialize communication groups, though severe failures may require job restart.
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Link Failure Detection*: InfiniBand uses Link Layer Discovery Protocol (LLDP) and hardware link status. RoCEv2 relies on Ethernet link status and RDMA connection management (RC/QP errors).
+- *Recovery Strategies*: For transient errors (e.g., temporary congestion causing packet loss), RDMA auto-retransmission handles recovery. For persistent failures (e.g., dead NIC), the scheduler must detect the failed node and restart the job or migrate it to healthy resources.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
+**5) Trade-off analysis**
+- *Automatic Recovery vs Job Restart*: RDMA auto-retransmission handles minor packet loss but cannot recover from link down events. For link/switch failures, job checkpoint recovery or full restart is often required, trading off compute time for fault tolerance.
+- *Redundancy Cost vs Reliability*: Extra switch ports and redundant cabling increase cost but significantly improve MTBF and recovery times.
 
+**6) How to determine the optimal solution**
+- Design the network topology with sufficient redundancy (e.g., 3-tier Fat-Tree with multiple spines). Implement automated health checking and integrate with the job scheduler for rapid failure detection and checkpoint-based recovery.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **MTBF**: Mean Time Between Failures — a measure of how reliable a hardware or software component is.
+- **LLDP**: Link Layer Discovery Protocol — a network protocol used by network devices to advertise their identity, capabilities, and neighbors.
+- **QP**: Queue Pair — the fundamental communication structure in RDMA, consisting of a Send Queue and a Receive Queue.
+- **ECMP**: Equal-Cost Multi-Path routing — used for fault tolerance and load balancing in case of link failures.
+
 ---
 
-# Day 122: Day 122: AI Infra System Design Topic 122
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 131: Introduction to AI Storage Systems: Requirements and Challenges
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to AI Storage Systems: Requirements and Challenges.
+- Core Examination Areas: Understanding the unique storage requirements of AI workloads (high throughput, large files, concurrent access), and how they differ from traditional enterprise storage.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput Requirements**: AI training data loading often requires 10-100 GB/s aggregate throughput for a 1000-GPU cluster.
+- **IOPS (Input/Output Operations Per Second)**: For model checkpoints (large files), IOPS is less critical than throughput; target sequential write speeds of 10+ GB/s per checkpoint save.
+- **Latency**: Metadata operations (stat, open, list) should have latency <10 milliseconds to avoid stalling data loaders.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- *Storage Tiering*: Hot storage (NVMe SSDs) for active training data and checkpoints; warm/cold storage (HDDs or object storage) for archived data.
+- *Distributed Storage Architecture*: Scale-out file systems or object storage systems that can be accessed concurrently by thousands of GPU nodes.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *File Systems vs Object Storage*: Distributed file systems (Lustre, CephFS) provide POSIX compatibility and are suitable for training data and checkpoints. Object storage (S3) is better for long-term archival and data lake workflows but has higher metadata latency.
+- *Data Locality*: Storing data on or near the compute nodes (e.g., local NVMe or local storage nodes) reduces network overhead for data loading.
 
+**5) Trade-off analysis**
+- *POSIX File Systems vs Object Storage*: POSIX file systems offer low-latency metadata operations and are compatible with existing data loading pipelines, but can struggle with massive concurrency. Object storage scales infinitely but has higher latency for small metadata operations.
+- *Local vs Distributed Storage*: Local NVMe offers the highest throughput but lacks centralized management and fault tolerance. Distributed storage offers scalability and resilience but introduces network overhead.
 
----
+**6) How to determine the optimal solution**
+- For active training workloads, use a high-performance distributed file system (Lustre, GPFS) or a fast object storage gateway (MinIO) with NVMe backend. Use object storage (S3) for data lake ingestion and checkpoint archival.
 
-# Day 123: Day 123: AI Infra System Design Topic 123
+**7) Full names and explanations of all nouns and abbreviations**
+- **IOPS**: Input/Output Operations Per Second — a common performance measurement for storage devices.
+- **POSIX**: Portable Operating System Interface — a family of standards specified by the IEEE for maintaining compatibility between operating systems.
+- **NVMe**: Non-Volatile Memory express — a high-performance, scalable, host-side interface specification for PCIe-based flash storage.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 132: Distributed File Systems for AI (Lustre, GPFS/IBM Spectrum Scale, CephFS)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Distributed File Systems for AI.
+- Core Examination Areas: Comparative analysis of Lustre, GPFS (IBM Spectrum Scale), and CephFS for AI workloads, focusing on throughput, scalability, and POSIX compliance.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Aggregate Throughput**: Target 100+ GB/s for a 1000-GPU cluster's training data file system.
+- **Metadata Server (MDS) Performance**: MDS should handle 10,000+ stat/open operations per second without becoming a bottleneck.
+- **Concurrent Clients**: Support for 1000+ concurrent GPU nodes reading/writing to the file system.
 
+**3) Core Architecture/Technical Component Design**
+- *Lustre*: A parallel distributed file system that uses Object Storage Targets (OSTs) for data and Metadata Servers (MDS) for file metadata.
+- *GPFS (IBM Spectrum Scale)*: A high-performance file system that uses a distributed metadata architecture and direct client-to-object storage access.
+- *CephFS*: A POSIX-compliant file system built on the Ceph distributed object store, using Metadata Authorities (MDAs) and OSDs (Object Storage Daemons).
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Lustre vs GPFS*: Lustre is widely adopted in HPC and AI, offering excellent scalability for large sequential workloads. GPFS offers strong consistency and is often used in financial and enterprise AI workloads. CephFS is more general-purpose but can have higher metadata latency under heavy concurrent access.
+- *Metadata Scaling*: In Lustre, multiple MDS instances and LDiskFS/GPFS backends are used to scale metadata operations. In CephFS, MDS clustering and tiered metadata can improve performance.
 
-# Day 124: Day 124: AI Infra System Design Topic 124
+**5) Trade-off analysis**
+- *Lustre vs CephFS*: Lustre is optimized for high-throughput sequential I/O (ideal for AI data loading) but has a complex architecture with dedicated MDS and OST servers. CephFS is unified (data and metadata on same cluster) but can suffer from metadata bottlenecks at massive scale.
+- *GPFS vs Lustre*: GPFS offers better multi-site and consistency features, but Lustre has a larger ecosystem for AI/HPC workloads.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For large-scale AI training with high sequential throughput requirements, Lustre or GPFS are optimal. For more general-purpose, unified storage with object and file access, CephFS or a layered approach (Lustre for training, Ceph/S3 for archival) is recommended.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **MDS**: Metadata Server — in Lustre, the server that stores and manages file metadata (directories, file sizes, permissions).
+- **OST**: Object Storage Target — in Lustre, the server that stores the actual file data.
+- **OSD**: Object Storage Daemon — in Ceph, the process that stores data and handles data replication, recovery, and rebalancing.
+- **MDA**: Metadata Authority — in CephFS, the component that manages file and directory metadata.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 133: Object Storage for AI Workloads (S3, OCS, MinIO)
 
+**1) Topic and Core Examination Areas**
+- Topic: Object Storage for AI Workloads.
+- Core Examination Areas: Understanding S3-compatible object storage, its use cases in AI (data lakes, checkpoint archival), and performance considerations.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput**: Object storage should support 10+ GB/s aggregate throughput for large file uploads/downloads (e.g., model checkpoints, dataset ingestion).
+- **Latency**: Object storage API latency (put/get) for large objects should be <100 milliseconds for initiation, with throughput dominating total time.
+- **Durability**: Target 99.999999999% (11 nines) durability for model checkpoints and training data.
 
-# Day 125: Day 125: AI Infra System Design Topic 125
+**3) Core Architecture/Technical Component Design**
+- *S3-Compatible Storage*: Amazon S3, IBM Cloud Object Storage (OCS), or self-hosted MinIO clusters that implement the S3 API.
+- *Data Lake Architecture*: Object storage serves as the central repository for raw data, processed datasets, and model artifacts, accessible by training, inference, and MLops pipelines.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *MinIO vs Cloud S3*: MinIO is a high-performance, self-hosted S3-compatible object storage server optimized for AI workloads and on-premises clusters. Cloud S3 offers managed durability and scalability but incurs egress costs and network latency.
+- *S3 API vs POSIX*: S3 uses a flat namespace and object-based access (put/get/delete), unlike POSIX file systems with hierarchical directories. AI data loaders must be adapted to use S3 SDKs or FUSE-based S3 mounts (e.g., s3fs, which has performance limitations).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Object Storage vs File Systems for Training Data*: Object storage is excellent for archival and data lake workflows but is not ideal for high-frequency, small-file training data loading due to S3 API latency and lack of POSIX semantics.
+- *Self-hosted vs Managed*: Self-hosted MinIO offers lower latency and no egress fees but requires operational overhead. Managed S3 offers durability and scale but at higher cost and potential network bottlenecks.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Use a high-performance object storage system like MinIO for on-premises data lakes and checkpoint archival. Use cloud S3 for multi-region data storage and long-term archival. For active training data loading, use a distributed file system or a high-performance S3 gateway with caching.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **S3**: Simple Storage Service — Amazon's object storage service, which has become an industry standard API for object storage.
+- **OCS**: Object Storage Service — cloud-based object storage offerings (e.g., IBM Cloud Object Storage, Oracle Cloud Storage).
+- **FUSE**: Filesystem in Userspace — a software interface for operating systems that allows users to create their own file system without modifying the kernel code.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 134: Block Storage and NVMe SSDs for High-Performance AI Training
 
-# Day 126: Day 126: AI Infra System Design Topic 126
+**1) Topic and Core Examination Areas**
+- Topic: Block Storage and NVMe SSDs for High-Performance AI Training.
+- Core Examination Areas: Understanding the role of block storage and NVMe SSDs in AI infra, particularly for local GPU node storage, caching, and fast checkpointing.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **NVMe Throughput**: Target per-NVMe drive sequential read/write speeds of 5-7 GB/s for PCIe Gen4/Gen5 NVMe SSDs.
+- **Latency**: NVMe read/write latency should be <100 microseconds.
+- **Capacity**: Local node storage for caching or checkpointing should be 1-4 TB per GPU server.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *Local NVMe Drives*: Installed directly into GPU servers via PCIe slots, used for local data caching, temporary checkpoints, or OS/application storage.
+- *NVMe over Fabrics (NVMe-oF)*: Allows NVMe drives to be accessed over a network (e.g., RoCEv2 or Fibre Channel), providing block-level storage with NVMe performance across the cluster.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Local NVMe vs Network Storage*: Local NVMe offers the lowest latency and highest throughput for node-local operations but is not shared across nodes. NVMe-oF provides shared block storage with NVMe performance but requires a low-latency network (RoCEv2/InfiniBand).
+- *NVMe-oF Protocols*: RoCEv2-based NVMe-oF (NVMe/RoCE) and Fibre Channel-based NVMe-oF (NVMe/FC) are the primary options for networked NVMe storage.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Local vs Networked NVMe*: Local NVMe is simpler and faster but lacks centralized management and cross-node sharing. Networked NVMe (NVMe-oF) enables shared fast storage but adds network complexity and requires RDMA-capable networks.
+- *Cost vs Performance*: NVMe SSDs are more expensive per GB than HDDs or even SATA SSDs, but are necessary for AI caching and low-latency checkpointing.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use local PCIe NVMe drives for node-local caching and temporary storage. For shared fast storage across the cluster, deploy NVMe-oF over RoCEv2 or InfiniBand if ultra-low latency block storage is required for distributed checkpointing.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **NVMe-oF**: NVMe over Fabrics — a set of protocols that allow NVMe commands to be sent over network fabrics (InfiniBand, RoCE, TCP).
+- **NVMe/RoCE**: NVMe over RDMA over Converged Ethernet — using RoCEv2 networks to access NVMe storage.
+- **Fibre Channel (FC)**: A high-speed network technology primarily used for storage area networks (SANs).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 127: Day 127: AI Infra System Design Topic 127
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 135: Checkpointing Storage: Requirements and Design (Frequent saves, large sizes)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Checkpointing Storage: Requirements and Design.
+- Core Examination Areas: Understanding the storage requirements for AI model checkpoints, including frequency, size, write patterns, and the impact on training throughput.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Checkpoint Size**: For a 70B parameter model in FP16, checkpoint size is ~140GB (weights) + optimizer states (~280GB for Adam) = ~420GB per full checkpoint.
+- **Checkpoint Frequency**: Every 1000-10000 steps, or every 1-24 hours, depending on cluster stability and job length.
+- **Write Throughput**: Saving a 420GB checkpoint should take <60 seconds to avoid stalling training for more than 1-2% of total time. Target checkpoint write throughput >= 7 GB/s.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- *Asynchronous Checkpointing*: Use background threads or separate storage nodes to write checkpoints asynchronously to avoid blocking GPU training loops.
+- *Checkpoint Sharding*: Each GPU or rank saves its local checkpoint (weights, optimizer states) to a shared distributed file system or object storage concurrently.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Distributed File System for Checkpoints*: Lustre or GPFS are preferred for fast, concurrent file writes. Object storage (S3/MinIO) is used for long-term archival but may be too slow for frequent checkpoints without optimization (e.g., multipart uploads, parallel writes).
+- *Checkpoint Compression*: Some frameworks compress optimizer states or use quantization during checkpointing to reduce storage size and write time, at the cost of CPU overhead.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Frequent vs Infrequent Checkpoints*: Frequent checkpoints improve recovery time but increase storage I/O load and can stall training. Infrequent checkpoints reduce I/O overhead but increase recovery time in case of failure.
+- *Synchronous vs Asynchronous Write*: Synchronous writes ensure data is persisted before resuming training but stall GPUs. Asynchronous writes improve training throughput but risk data loss if the storage node fails before write completion.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use a high-performance distributed file system (Lustre/GPFS) or fast object storage (MinIO with NVMe backend) for checkpoints. Implement asynchronous, sharded checkpointing where each GPU/rank writes its local state concurrently. Tune checkpoint frequency based on cluster MTBF and training time per step.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **FP16**: 16-bit Floating Point — a half-precision floating-point format used to reduce memory and bandwidth in AI models.
+- **Adam**: Adaptive Moment Estimation — a popular optimization algorithm used in training deep learning models.
+- **MTBF**: Mean Time Between Failures — a measure of system reliability.
 
 ---
-
-# Day 128: Day 128: AI Infra System Design Topic 128
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+(Continuing to Days 136-150 with the same 7-section structure...)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 136: Data Loading Pipelines and I/O Bound Training (Prefetching, caching)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Data Loading Pipelines and I/O Bound Training.
+- Core Examination Areas: Understanding how data loading becomes a bottleneck in AI training, and techniques like prefetching, caching, and parallel data loading to keep GPUs busy.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **GPU Ingestion Rate**: For an H100 training LLM, target data ingestion rate is 10-20 GB/s per GPU to keep compute units saturated.
+- **I/O Bound vs Compute Bound**: A training job is I/O bound if GPUs spend >10% of time waiting for data. Target is <5% wait time.
+- **Prefetch Buffer Size**: In-memory or NVMe cache size for prefetching should be 10-50 GB per data loader thread.
 
+**3) Core Architecture/Technical Component Design**
+- *Data Loader Threads*: Multiple CPU threads per GPU fetch and preprocess data from storage, using libraries like PyTorch's `DataLoader` or custom C++ data pipelines.
+- *Prefetching and Caching*: Use in-memory caches (host RAM) or local NVMe drives to store frequently accessed data blocks, reducing remote storage I/O.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *PyTorch DataLoader vs Custom Pipelines*: PyTorch's built-in `DataLoader` is easy to use but can have overhead for large-scale clusters. Custom C++/CUDA data pipelines (e.g., using DALI - NVIDIA Data Loading Library) offer higher throughput and lower latency.
+- *Data Format Optimization*: Using binary formats (e.g., RecordIO, TFRecord, or custom binary shards) with contiguous memory layout reduces parsing overhead compared to text-based formats (JSON, CSV).
 
-# Day 129: Day 129: AI Infra System Design Topic 129
+**5) Trade-off analysis**
+- *In-Memory vs NVMe Caching*: In-memory (RAM) caching offers the lowest latency but is limited by host DRAM size. NVMe caching offers larger capacity with still-low latency but requires additional storage hardware.
+- *General Purpose vs Specialized Libraries*: General-purpose data loaders are easier to develop but may not scale to 1000+ GPUs. Specialized libraries (DALI, custom C++ pipelines) require more engineering effort but deliver higher throughput.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For I/O-bound training workloads, implement multi-threaded data loading with in-memory prefetching. For large-scale clusters, use NVIDIA DALI or custom C++/CUDA pipelines with binary data formats (TFRecord, RecordIO) to maximize GPU utilization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **DALI**: NVIDIA Data Loading Library — a GPU-accelerated library for data preprocessing and augmentation.
+- **TFRecord**: TensorFlow's record data format — a simple format for storing a sequence of binary records.
+- **RecordIO**: A format for storing serialized records, commonly used in MXNet and other frameworks for efficient data loading.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 137: Storage Tiering: Hot, Warm, Cold Data in AI Workflows
 
+**1) Topic and Core Examination Areas**
+- Topic: Storage Tiering: Hot, Warm, Cold Data in AI Workflows.
+- Core Examination Areas: Understanding data lifecycle in AI, classifying data into hot, warm, and cold tiers, and designing storage architectures that optimize cost and performance.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Hot Data**: Actively used training data or active checkpoints. Access frequency: multiple times per hour. Storage: NVMe SSDs or high-performance distributed file systems.
+- **Warm Data**: Recently processed datasets or intermediate model artifacts. Access frequency: daily or weekly. Storage: SATA SSDs or high-capacity NAS.
+- **Cold Data**: Archived training data, old checkpoints, or compliance data. Access frequency: monthly or rarely. Storage: HDD-based object storage or tape/cloud archival (e.g., S3 Glacier).
 
-# Day 130: Day 130: AI Infra System Design Topic 130
+**3) Core Architecture/Technical Component Design**
+- *Tiered Storage Architecture*: A hierarchy of storage systems where data automatically or manually moves between tiers based on access patterns or age.
+- *Data Movement Pipelines*: ETL or data pipeline tools that migrate data from hot to warm to cold tiers based on policies.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Automated Tiering*: Some distributed file systems (e.g., Lustre with OSS tiers, Ceph with RADOS tiers) support automated data migration between fast and slow storage based on access patterns.
+- *Storage Gateways*: Cloud storage gateways (e.g., AWS Storage Gateway, ONTAP Cloud) provide on-premises caching of cloud storage, presenting a local file interface while backing data to cloud object storage.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Performance vs Cost*: Hot storage (NVMe) offers high performance but is expensive per GB. Cold storage (HDD, cloud archival) is cheap but has high latency and access fees. Tiering balances these by keeping active data fast and archiving inactive data cheaply.
+- *Automated vs Manual Tiering*: Automated tiering reduces operational overhead but may misclassify data or incur unnecessary data movement costs. Manual tiering requires more human oversight but offers precise control.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- Classify AI data by lifecycle and access patterns. Use NVMe-backed distributed file systems or object storage gateways for hot/warm data, and S3-compatible archival storage for cold data. Implement policies to automatically move checkpoints older than 30 days to cold storage.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **ETL**: Extract, Transform, Load — a process for collecting data from various sources, transforming it into a suitable format, and loading it into a destination storage system.
+- **NAS**: Network Attached Storage — a file-level storage server connected to a network that provides access to a heterogeneous group of clients.
+- **RADOS**: Reliable Autonomic Distributed Object Store — the core storage engine of Ceph, providing data durability and scalability.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 138: Storage Performance Measurement and Benchmarking (IOR, FIO)
 
-# Day 131: Day 131: AI Infra System Design Topic 131
+**1) Topic and Core Examination Areas**
+- Topic: Storage Performance Measurement and Benchmarking.
+- Core Examination Areas: Understanding how to benchmark distributed storage systems using tools like IOR and FIO, and interpreting metrics like throughput, IOPS, and latency.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Sequential Throughput**: Target >= 10 GB/s per storage node or aggregate >= 100 GB/s for a 100-node AI training cluster.
+- **Metadata Operations Rate**: Target >= 10,000 stat/open operations per second for the metadata server.
+- **I/O Size Variations**: Benchmarks should test small (4KB), medium (1MB), and large (16MB+) I/O sizes to reflect different workloads (metadata vs data loading).
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *IOR (IO Replay)*: A benchmark tool designed for parallel file systems, measuring read/write throughput and latency using patterns like collective, independent, read, write.
+- *FIO (Flexible I/O Tester)*: A tool for benchmarking storage performance, supporting various I/O engines (libaio, rdma, nvme) and workload profiles.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *IOR vs FIO*: IOR is optimized for parallel file systems (Lustre, GPFS) and focuses on collective operations mimicking HPC/AI workloads. FIO is more general-purpose and can test block storage, NVMe, and file systems with fine-grained control over I/O patterns.
+- *Benchmark Patterns*: Sequential read/write benchmarks simulate data loading or checkpoint saving. Random read/write benchmarks simulate metadata operations or small file access.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Collective vs Independent I/O*: Collective I/O benchmarks (all nodes read/write the same file simultaneously) stress the metadata server and network interconnect. Independent I/O benchmarks (each node reads/writes a different file) stress aggregate throughput. Both are needed for comprehensive storage validation.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- Use IOR to benchmark distributed file systems for AI training workloads, focusing on collective read/write throughput and metadata operations. Use FIO for validating local NVMe or block storage performance. Ensure benchmarks reflect the actual I/O sizes and patterns of your AI workloads.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **IOR**: IO Replay — a benchmark tool for parallel file systems developed by LLNL (Lawrence Livermore National Laboratory).
+- **FIO**: Flexible I/O Tester — a tool to measure and profile storage performance.
+- **LLNL**: Lawrence Livermore National Laboratory — a U.S. national laboratory that develops and maintains many HPC benchmarking tools.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 132: Day 132: AI Infra System Design Topic 132
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 139: Storage Fault Tolerance and Data Replication Strategies
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Storage Fault Tolerance and Data Replication Strategies.
+- Core Examination Areas: Understanding how distributed storage systems ensure data durability and availability through replication, erasure coding, and fault recovery mechanisms.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Data Durability**: Target 99.999999999% (11 nines) for model checkpoints and training datasets.
+- **Recovery Time Objective (RTO)**: Time to recover from a storage node failure should be <1 hour for active datasets, <24 hours for archival data.
+- **Recovery Point Objective (RPO)**: Data loss tolerance should be near-zero for training checkpoints (RPO = 0 via synchronous replication or frequent snapshots).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- *Replication*: Data is copied to multiple storage nodes or racks. Typical AI storage uses 3x replication for checkpoints and active data.
+- *Erasure Coding*: A method of splitting data into fragments, expanding, and encoding them with redundant data pieces, stored across different nodes. Offers higher storage efficiency than replication but with higher compute and read latency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Replication vs Erasure Coding*: Replication (e.g., 3x) offers fast read/write and simple recovery but uses 3x storage capacity. Erasure coding (e.g., 8+3) uses less capacity (approx 1.3x) but requires more compute for encoding/decoding and has higher latency for small reads.
+- *Storage Fault Domains*: Replicas should be placed across different failure domains (racks, switches, power supplies) to ensure availability during hardware failures.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Replication vs Erasure Coding for AI*: AI workloads often prefer replication for active data and checkpoints due to the need for high throughput and low latency during saves and restores. Erasure coding is better suited for cold data or data lake archives where storage cost is a higher priority than I/O performance.
+- *Synchronous vs Asynchronous Replication*: Synchronous replication ensures zero data loss but can add latency to write operations. Asynchronous replication is faster but risks data loss if the primary node fails before sync.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For AI training checkpoints and active datasets, use 3x replication across fault domains for maximum performance and zero RPO. For data lake archives, use erasure coding to optimize storage cost while maintaining high durability.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **RTO**: Recovery Time Objective — the targeted duration of time and a service level within which a business process must be restored after a disaster.
+- **RPO**: Recovery Point Objective — the maximum targeted period in which data might be lost from an IT service due to a major incident.
+- **Erasure Coding**: A method of error correction that allows original data to be recovered from a subset of encoded data fragments.
 
 ---
 
-# Day 133: Day 133: AI Infra System Design Topic 133
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 140: Unified Storage Architectures for Training and Inference
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Unified Storage Architectures for Training and Inference.
+- Core Examination Areas: Designing storage systems that serve both AI training (high throughput, large files) and inference (low latency, high concurrency) workloads efficiently.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Training Throughput**: 10-100 GB/s for data loading and checkpoints.
+- **Inference Latency (TTFT/TP99)**: For serving, TTFT (Time to First Token) should be <100 milliseconds for interactive chat, and TP99 latency per request <1 second.
+- **Inference Concurrency**: Object storage or file systems serving inference model weights should support 1000+ concurrent model loads without metadata bottlenecks.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- *Unified Data Lake*: A single storage backend (e.g., S3-compatible object storage or distributed file system) that stores raw data, training datasets, model artifacts, and inference serving models.
+- *Storage Caching for Inference*: Inference nodes cache model weights in local NVMe or host RAM to reduce repeated storage reads during request serving.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Training Storage vs Inference Storage*: Training storage emphasizes high sequential throughput for data loading and checkpointing. Inference storage emphasizes low-latency metadata operations and concurrent model weight delivery to serving nodes.
+- *Model Registry and Storage Integration*: Tools like MLflow or Weights & Biases integrate with storage systems to version model artifacts and ensure inference servers load the correct checkpoint versions.
 
+**5) Trade-off analysis**
+- *Shared vs Separate Storage*: A unified storage system simplifies management and ensures data consistency between training and inference but must be tuned to handle both high-throughput (training) and low-latency (inference) workloads. Separate storage systems can be optimized for each workload but increase operational complexity.
+- *Object Storage vs File System for Models*: Object storage is ideal for model artifact versioning and archival. For active inference serving, a fast file system or cached object storage gateway is preferred to ensure low-latency model loading.
 
----
+**6) How to determine the optimal solution**
+- Use a unified S3-compatible object storage or distributed file system as the single source of truth for all AI assets (data, checkpoints, models). Implement caching layers (NVMe or RAM) on inference nodes to ensure low-latency model serving. Use model registry tools to version and track artifacts.
 
-# Day 134: Day 134: AI Infra System Design Topic 134
+**7) Full names and explanations of all nouns and abbreviations**
+- **TTFT**: Time to First Token — the latency from sending a prompt to receiving the first generated token in LLM inference.
+- **MLflow**: An open-source platform for managing the ML lifecycle, including experimentation, reproducibility, and deployment.
+- **Weights & Biases (W&B)**: A platform for tracking and visualizing machine learning experiments and model artifacts.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 141: Introduction to AI Task Scheduling & Kubernetes Scheduler Basics
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Introduction to AI Task Scheduling & Kubernetes Scheduler Basics.
+- Core Examination Areas: Understanding the role of schedulers in AI clusters, Kubernetes scheduler architecture, and how AI workloads differ from traditional web or batch workloads.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Job Submission Rate**: Number of training jobs submitted per hour/day. Target scheduler decision latency <1 second per job for small jobs, <10 seconds for large distributed jobs.
+- **Cluster Utilization**: Target GPU utilization >70% across the cluster to maximize ROI, while avoiding over-provisioning that leads to scheduling friction.
+- **Queue Depth**: Number of pending jobs in the scheduler queue. Target <100 for responsive scheduling.
 
+**3) Core Architecture/Technical Component Design**
+- *Kubernetes Scheduler*: The default Kubernetes component that assigns Pods to Nodes based on resource availability, taints/tolerations, and scheduling policies.
+- *AI Workload Pods*: Pods representing training jobs, often requiring multiple GPUs (e.g., 8-GPU pods) and specific network/storage attachments.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Default K8s Scheduler vs AI-Specific Schedulers*: The default K8s scheduler is general-purpose and may not optimize for AI-specific needs like gang scheduling, topology-aware placement, or GPU sharing. AI-specific schedulers (e.g., Volcano, KubeFlow Fairness, Yunikorn) add these capabilities.
+- *Device Plugins*: Kubernetes Device Plugins expose GPUs, RDMA NICs, or NVMe drives to the scheduler, allowing Pods to request specific hardware resources.
 
-# Day 135: Day 135: AI Infra System Design Topic 135
+**5) Trade-off analysis**
+- *Default K8s Scheduler vs Custom Schedulers*: Default K8s scheduler is stable and widely supported but lacks AI-specific optimizations. Custom schedulers (Volcano, etc.) offer gang scheduling and fairness but add operational complexity and require maintenance.
+- *Over-subscription vs Strict Allocation*: Over-subscribing GPUs (allowing more Pods to request GPUs than available) improves utilization but can lead to contention and degraded training performance. Strict allocation ensures performance but may lower utilization.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- For production AI clusters, use an AI-aware scheduler like Volcano or Kube-batch on top of Kubernetes. Enable GPU device plugins and configure resource quotas to balance cluster utilization with job performance guarantees.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **Kubernetes (K8s)**: An open-source container orchestration platform for automating deployment, scaling, and management of containerized applications.
+- **Pod**: The smallest deployable unit in Kubernetes, representing one or more containers.
+- **Taints/Tolerations**: Kubernetes mechanisms that allow nodes to repel Pods (taints) or allow Pods to be scheduled on tainted nodes (tolerations).
+- **Device Plugin**: A Kubernetes extension that exposes node-specific hardware (GPUs, FPGAs, RDMA NICs) to the scheduler.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 142: Gang Scheduling for Distributed Training Jobs
 
+**1) Topic and Core Examination Areas**
+- Topic: Gang Scheduling for Distributed Training Jobs.
+- Core Examination Areas: Understanding gang scheduling, why it is critical for distributed AI training (All-Reduce dependencies), and how to implement it in schedulers.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Gang Size**: Number of Pods or ranks required for a distributed training job (e.g., 64 GPUs for an 8-node 8-GPU job).
+- **Scheduling Success Rate**: Percentage of gang jobs that successfully acquire all required resources simultaneously. Target >95% for well-provisioned clusters.
+- **Waste Time**: Time when some Pods of a gang job start but others are pending, leading to idle GPU time. Target waste time <5% of job duration.
 
-# Day 136: Day 136: AI Infra System Design Topic 136
+**3) Core Architecture/Technical Component Design**
+- *All-or-Nothing Scheduling*: A gang scheduling policy where a job is only scheduled if all its required Pods can be placed simultaneously. Otherwise, the job remains in a pending state.
+- *Queue-Based Gang Scheduling*: Jobs are placed in queues ordered by priority or fairness metrics. The scheduler attempts to satisfy gang jobs from the highest priority queue first.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Volcano Scheduler*: An open-source batch scheduler for Kubernetes that supports gang scheduling, priority queues, and fair sharing. It implements the "gang" concept via PodGroups.
+- *Gang Scheduling Algorithms*: Best-fit, first-fit, or bin-packing algorithms are used to place all Pods of a gang job onto available nodes that meet the resource and topology requirements.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *All-or-Nothing vs Partial Start*: All-or-nothing prevents idle resources and communication deadlocks but can increase job wait time if the cluster is fragmented. Partial start allows some Pods to begin but risks performance degradation or synchronization failures in All-Reduce workloads.
+- *Strict Gang vs Flexible Gang*: Strict gang requires exact resource matches. Flexible gang allows some leeway (e.g., accepting slightly different node types) to improve scheduling success rates but may impact performance or cost.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For distributed training jobs using All-Reduce or parameter server architectures, implement strict gang scheduling via Volcano or Kube-batch. Ensure the cluster has sufficient homogeneous resources (same GPU type, network topology) to maximize gang scheduling success rates.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **Gang Scheduling**: A scheduling approach where a group of related tasks (a gang) is scheduled together on multiple nodes to ensure they start simultaneously.
+- **PodGroup**: A Volcano/Kube-batch concept representing a group of Pods that belong to the same job and must be scheduled together.
+- **All-Reduce**: A collective communication pattern where all nodes contribute data and receive the aggregated result.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 143: GPU Scheduling Strategies: Time-slicing, MIG, Preemption
 
-# Day 137: Day 137: AI Infra System Design Topic 137
+**1) Topic and Core Examination Areas**
+- Topic: GPU Scheduling Strategies: Time-slicing, MIG, Preemption.
+- Core Examination Areas: Understanding how to share GPUs among multiple jobs or users, including time-slicing, NVIDIA MIG (Multi-Instance GPU), and job preemption strategies.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Time-Slice Interval**: For GPU time-slicing, the interval between context switches should be 10-100 milliseconds to minimize overhead while providing fair access.
+- **MIG Partition Sizes**: NVIDIA MIG allows partitioning a GPU into up to 7 instances (e.g., 1g.5gb, 2g.10gb, 3g.20gb, etc.), each with dedicated memory and compute units.
+- **Preemption Latency**: Time to suspend a lower-priority job and free GPUs for a higher-priority job. Target <30 seconds including checkpoint save or context switch.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *Time-Slicing Scheduler*: The Kubernetes GPU scheduler can allocate a GPU to multiple Pods and time-share it using round-robin or fair-share algorithms.
+- *MIG (Multi-Instance GPU)*: A hardware-level partitioning feature in NVIDIA A100/H100 GPUs that creates isolated GPU instances with dedicated memory, cache, and compute units.
+- *Preemption Mechanism*: The scheduler can suspend or evict lower-priority Pods to make resources available for higher-priority jobs.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Time-Slicing vs MIG*: Time-slicing is a software-level sharing mechanism that context-switches between Pods on the same GPU, incurring some overhead. MIG is hardware-level isolation, offering true performance guarantees but reducing the total number of available GPUs (each MIG instance is a separate schedulable unit).
+- *Preemption with Checkpointing*: For training jobs, preemption often requires saving a checkpoint before eviction. For inference or stateless jobs, preemption can be instantaneous (container restart).
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Time-Slicing vs Dedicated GPUs*: Time-slicing improves GPU utilization for small or bursty workloads but can cause performance degradation due to context switching and memory contention. Dedicated GPUs ensure performance but may be underutilized.
+- *MIG vs Full GPU*: MIG allows fine-grained sharing but requires workload compatibility with MIG partition sizes. Full GPU allocation is simpler but less flexible for multi-tenant environments.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For multi-tenant clusters with diverse workload sizes, use MIG for workloads that fit MIG partition profiles and require performance isolation. Use time-slicing for small, interactive, or inference workloads where slight overhead is acceptable. Implement preemption with automatic checkpointing for training jobs.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **MIG**: Multi-Instance GPU — a feature in NVIDIA A100/H100 GPUs that allows a single GPU to be partitioned into multiple independent GPU instances.
+- **Context Switch**: The process of saving the state of a running process or thread and restoring the state of another, allowing multiple processes to share a single CPU or GPU.
+- **Preemption**: The act of suspending or evicting a lower-priority job to allocate resources to a higher-priority job.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 138: Day 138: AI Infra System Design Topic 138
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 144: Multi-tenant Scheduling and Resource Isolation
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Multi-tenant Scheduling and Resource Isolation.
+- Core Examination Areas: Understanding how to schedule AI workloads for multiple teams or users (tenants) while ensuring fair resource allocation and isolation to prevent noisy neighbor effects.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Tenant Isolation**: Ensure that one tenant's workload does not degrade another tenant's performance beyond a defined SLA (e.g., <10% latency degradation).
+- **Fair Sharing Metrics**: Share metrics like "share target" (e.g., each tenant gets 20% of cluster GPUs) and "boost factor" (priority weighting for certain tenants).
+- **Quota Limits**: Maximum number of GPUs or CPU cores a tenant can request simultaneously.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- *Namespaces and Quotas*: Kubernetes namespaces with ResourceQuota and LimitRange objects to enforce per-tenant resource limits.
+- *Fair Share Schedulers*: Schedulers like Kube-Fairness or Yunikorn implement fair sharing algorithms (e.g., Dominant Resource Fairness - DRF) to allocate GPUs based on tenant claims and priorities.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Dominant Resource Fairness (DRF)*: A fair allocation algorithm that considers the dominant resource (e.g., GPUs vs CPU) for each job and ensures proportional sharing based on reported demands.
+- *Quality of Service (QoS) Classes*: Kubernetes QoS classes (Guaranteed, Burstable, BestEffort) can be used to prioritize eviction and resource allocation during contention.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *Strict Quotas vs Flexible Sharing*: Strict quotas prevent overuse but can lead to underutilization if a tenant's quota is not fully used. Flexible sharing (fair share) improves utilization but requires careful tuning to prevent large jobs from starving small ones.
+- *Isolation vs Utilization*: Strong resource isolation (MIG, dedicated nodes) ensures performance but reduces overall cluster utilization. Soft isolation (time-slicing, fair share) improves utilization but risks noisy neighbor effects.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- Use Kubernetes namespaces with resource quotas for basic tenant isolation. For advanced fair sharing across multiple teams, deploy a fair-share scheduler like Yunikorn or Kube-Fairness with DRF. Use QoS classes and preemption policies to handle contention fairly.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **DRF**: Dominant Resource Fairness — a fair allocation algorithm that generalizes proportional share to multiple resource types.
+- **QoS**: Quality of Service — a Kubernetes classification (Guaranteed, Burstable, BestEffort) that determines how the scheduler and evictor treat Pods during resource contention.
+- **Namespace**: A Kubernetes mechanism for dividing cluster resources between multiple users or teams.
 
 ---
 
-# Day 139: Day 139: AI Infra System Design Topic 139
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 145: Job Placement Algorithms: Topology-aware Scheduling
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Job Placement Algorithms: Topology-aware Scheduling.
+- Core Examination Areas: Understanding how to place AI training Pods on nodes to minimize network communication latency and maximize bandwidth, considering GPU, NIC, and switch topologies.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Placement Latency Impact**: Poor placement (e.g., GPUs on different switches) can increase All-Reduce latency by 2-5x compared to optimal placement (same switch or NVLink domain).
+- **Topology Awareness**: The scheduler should be aware of node-to-switch mappings, NVLink domains, and RDMA network zones.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- *Node Affinity and Anti-Affinity*: Kubernetes scheduling rules that place Pods on or avoid specific nodes based on labels (e.g., `topology.kubernetes.io/zone`, `rack`).
+- *Topology Spread Constraints*: Ensure Pods of a gang job are spread across failure domains (zones, racks) for fault tolerance, or concentrated in the same domain for performance.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *NVLink Domain Awareness*: Schedule all 8 GPUs of an 8-GPU training job on the same node to leverage NVLink full-mesh bandwidth.
+- *RDMA Network Zone Awareness*: Schedule inter-node communication partners on nodes that share the same Top-of-Rack (ToR) switch or IB partition to minimize network hops.
 
+**5) Trade-off analysis**
+- *Performance vs Fault Tolerance*: Concentrating a job on a single node or switch maximizes performance (NVLink, same ToR) but creates a single point of failure. Spreading Jobs across racks or zones improves fault tolerance but may increase network latency.
+- *Complexity of Topology Awareness*: Topology-aware schedulers require detailed cluster topology information and can be more complex to configure and maintain than default schedulers.
 
----
+**6) How to determine the optimal solution**
+- For performance-critical LLM training, use topology-aware scheduling to place all GPUs of a job on the same node (for intra-node) or within the same ToR switch domain (for inter-node). Use topology spread constraints for fault-tolerant placement across zones when job length justifies the latency trade-off.
 
-# Day 140: Day 140: AI Infra System Design Topic 140
+**7) Full names and explanations of all nouns and abbreviations**
+- **Node Affinity**: A Kubernetes scheduling feature that constrains which nodes a Pod is eligible to be scheduled on, based on labels.
+- **ToR**: Top-of-Rack — the network switch at the top of a server rack, connecting all servers within that rack.
+- **IB Partition**: InfiniBand partition key (P_Key) used to isolate and manage communication domains within an IB fabric.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 146: Fault Tolerance and Checkpoint Recovery in Schedulers
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Fault Tolerance and Checkpoint Recovery in Schedulers.
+- Core Examination Areas: Understanding how schedulers and training frameworks handle node failures, Pod evictions, and how to recover jobs using checkpoints.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Failure Detection Time**: Time to detect a node or Pod failure. Target <10 seconds for K8s node status updates.
+- **Recovery Time**: Time to reschedule a job and restore from the last checkpoint. Target <5 minutes for a 64-GPU job with a 420GB checkpoint.
+- **Checkpoint Frequency vs MTBF**: Checkpoint frequency should be tuned so that the expected loss between checkpoints is less than 1-2 hours of training time, based on cluster MTBF.
 
+**3) Core Architecture/Technical Component Design**
+- *Pod Restart Policies*: Kubernetes policies (Always, OnFailure, Never) that determine how to handle Pod failures. For training jobs, OnFailure or Always with checkpoint recovery is typical.
+- *Scheduler Failure Handling*: AI schedulers (Volcano, etc.) can detect failed ranks and trigger job restart or checkpoint recovery workflows.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Automatic Checkpoint Recovery*: Training frameworks (PyTorch DDP, DeepSpeed, Megatron-LM) can be configured to automatically load the latest checkpoint upon restart, resuming training from the last saved step.
+- *Node Drain and Eviction*: When a node is failing or being maintained, the scheduler can drain it (cordon + drain), evicting Pods gracefully and allowing them to restart on healthy nodes with checkpoint recovery.
 
-# Day 141: Day 141: AI Infra System Design Topic 141
+**5) Trade-off analysis**
+- *Frequent Checkpointing vs Recovery Time*: Frequent checkpoints reduce recovery time but increase storage I/O and training overhead. Infrequent checkpoints save I/O but increase recovery time and wasted compute after a failure.
+- *Graceful Eviction vs Forceful Termination*: Graceful eviction allows checkpoint saving but delays resource reallocation. Forceful termination is instant but requires full restart from the last checkpoint.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to determine the optimal solution**
+- Configure training frameworks with automatic checkpoint recovery and set checkpoint frequency based on cluster MTBF and storage performance. Use Kubernetes node drain workflows for planned maintenance, and rely on scheduler-driven Pod restarts for unexpected failures.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full names and explanations of all nouns and abbreviations**
+- **DDP**: Distributed Data Parallel — a training paradigm where each GPU processes a subset of the batch and gradients are synchronized across GPUs.
+- **DeepSpeed**: Microsoft's library for distributed and memory-efficient training, including ZeRO optimization and checkpointing features.
+- **Megatron-LM**: NVIDIA's library for training large transformer models, supporting tensor/pipeline parallelism and checkpointing.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 147: Dynamic Resource Allocation and Elastic Training Scheduling
 
+**1) Topic and Core Examination Areas**
+- Topic: Dynamic Resource Allocation and Elastic Training Scheduling.
+- Core Examination Areas: Understanding how to dynamically scale AI training jobs up or down based on cluster availability or workload changes, and the concept of elastic training.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Elastic Scaling Granularity**: Minimum resource unit for scaling (e.g., 1 GPU, 1 node, or 8-GPU pod). Target scaling decision latency <30 seconds.
+- **Training Efficiency Drop**: The percentage decrease in training throughput when dynamically adding or removing GPUs. Target <10% efficiency drop during elastic scaling events.
 
-# Day 142: Day 142: AI Infra System Design Topic 142
+**3) Core Architecture/Technical Component Design**
+- *Elastic Training Frameworks*: Frameworks like PyTorch Elastic (torchelastic) or DeepSpeed Elastic allow training jobs to dynamically adjust the number of participating GPUs without full restart.
+- *Dynamic Pod Scaling*: Kubernetes Horizontal Pod Autoscaler (HPA) or custom controllers that add or remove GPU Pods based on queue length or cluster utilization.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *PyTorch Elastic*: Uses `torchrun` with elastic launch mode, allowing jobs to continue training even if some ranks join or leave, by synchronizing at checkpoint or alignment points.
+- *Checkpoint-based Elasticity*: When scaling down, the job saves a checkpoint and restarts with fewer GPUs. When scaling up, it loads the checkpoint and adds new GPUs to the All-Reduce group.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off analysis**
+- *Elastic vs Static Sizing*: Elastic training maximizes cluster utilization and handles transient failures gracefully but requires framework support and can introduce synchronization overhead. Static sizing (fixed gang jobs) is simpler but may leave GPUs idle or cause job failures if resources are unavailable.
+- *In-Place vs Restart Scaling*: In-place elastic scaling (without checkpoint save) is faster but may require special communication group reconfiguration. Restart scaling (with checkpoint) is more robust but adds I/O overhead.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to determine the optimal solution**
+- For clusters with volatile workloads or frequent node failures, use elastic training frameworks (PyTorch Elastic, DeepSpeed Elastic) with checkpoint-based resynchronization. Ensure the training loop supports dynamic rank addition/removal via NCCL group reconfiguration.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full names and explanations of all nouns and abbreviations**
+- **torchelastic**: PyTorch's elastic training library, allowing training jobs to dynamically adjust to node failures or resource changes.
+- **HPA**: Horizontal Pod Autoscaler — a Kubernetes component that automatically scales the number of Pods in a deployment or replica set.
+- **All-Reduce group**: The set of GPUs or nodes participating in an All-Reduce collective communication operation.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 148: Inference Serving Scheduling: GPU Batching, Request Routing
 
-# Day 143: Day 143: AI Infra System Design Topic 143
+**1) Topic and Core Examination Areas**
+- Topic: Inference Serving Scheduling: GPU Batching, Request Routing.
+- Core Examination Areas: Understanding how to schedule and batch inference requests on GPUs to maximize throughput while meeting latency SLAs (TTFT, TP99).
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **QPS (Queries Per Second)**: Target inference QPS of 100-1000+ depending on model size and use case (chat vs batch processing).
+- **Latency Metrics (TTFT/TP99)**: TTFT (Time to First Token) <100ms for interactive chat. TP99 latency (end-to-end) <1 second for standard requests.
+- **Batch Size**: Dynamic batch size optimized for GPU utilization, typically 16-128 for LLM inference, depending on context length and memory.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- *Inference Servers*: Frameworks like vLLM, TensorRT-LLM, or Triton Inference Server that manage GPU memory, request queues, and execution.
+- *Request Router*: A component that distributes incoming inference requests to available inference server instances, balancing load and minimizing latency.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Static Batching vs Continuous Batching (In-flight Batching)*: Static batching groups requests into fixed-size batches before execution. Continuous batching (in-flight batching) allows new requests to be inserted into the batch as previous requests finish, maximizing GPU utilization and reducing latency.
+- *PagedAttention*: A memory management technique used in vLLM that allocates KV cache in continuous memory blocks, improving GPU memory utilization and batching efficiency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off analysis**
+- *Latency vs Throughput*: Smaller batch sizes reduce TTFT but lower overall throughput. Larger batch sizes increase throughput but can increase TTFT and TP99 latency. Continuous batching helps balance both.
+- *Routing Complexity vs Load Balancing*: Advanced request routers (e.g., based on latency metrics or GPU load) improve load distribution but add system complexity and potential routing overhead.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to determine the optimal solution**
+- For LLM inference serving, use continuous batching engines like vLLM or TensorRT-LLM with PagedAttention. Implement a request router (e.g., Kubernetes Service with load balancing, or a dedicated API gateway) to distribute traffic across inference replicas. Tune batch size based on TTFT and throughput SLAs.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full names and explanations of all nouns and abbreviations**
+- **vLLM**: An open-source library for fast LLM inference and serving, featuring PagedAttention and continuous batching.
+- **TensorRT-LLM**: NVIDIA's library for optimizing and deploying LLMs on GPUs, using TensorRT for high-performance inference.
+- **Triton Inference Server**: NVIDIA's open-source inference serving software that supports multiple frameworks and optimization backends.
+- **KV Cache**: Key-Value Cache — a cache used in transformer models during inference to store computed key and value states for previous tokens, avoiding redundant computation.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 144: Day 144: AI Infra System Design Topic 144
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 149: Advanced Scheduling: Reinforcement Learning for Scheduling, Predictive Scheduling
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Advanced Scheduling: Reinforcement Learning for Scheduling, Predictive Scheduling.
+- Core Examination Areas: Understanding how machine learning and reinforcement learning can be applied to optimize cluster scheduling, resource allocation, and job placement.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Scheduling Optimization Target**: Maximize cluster utilization, minimize job wait time, or maximize throughput (e.g., tokens/sec for LLM training).
+- **Prediction Accuracy**: Accuracy of job runtime or resource usage predictions. Target >80% accuracy for job duration prediction to improve gang scheduling and preemption decisions.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- *Reinforcement Learning (RL) Schedulers*: Schedulers that use RL agents to learn optimal placement and scheduling policies based on cluster state and job characteristics.
+- *Predictive Scheduling Components*: Machine learning models that predict job runtime, resource needs, or failure probability based on historical job metadata and cluster metrics.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *RL for Scheduling*: The RL agent observes the cluster state (available GPUs, queue length, job priorities) and takes actions (assign job to node, delay scheduling). Rewards are based on utilization, wait time, or throughput.
+- *Runtime Prediction Models*: Use historical job data (model size, batch size, GPU count) to train regression or sequence models that predict job completion time, enabling better gang scheduling and preemption.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off analysis**
+- *ML-based vs Heuristic Scheduling*: ML-based schedulers can adapt to complex, changing workloads but require training data, computational overhead for inference, and may be less interpretable. Heuristic schedulers (gang scheduling, fair share) are deterministic and easier to debug but may not optimize for complex, multi-objective goals.
+- *Prediction Overhead vs Benefit*: Runtime prediction models add scheduling latency and require maintenance. The benefit must outweigh the overhead in terms of improved utilization or reduced wait time.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to determine the optimal solution**
+- For large, heterogeneous clusters with diverse workloads, explore RL-based or predictive schedulers for advanced optimization. Start with heuristic schedulers (Volcano, fair share) and add prediction models for job runtime or failure probability to enhance gang scheduling and preemption policies.
 
+**7) Full names and explanations of all nouns and abbreviations**
+- **RL**: Reinforcement Learning — a type of machine learning where an agent learns to make decisions by taking actions in an environment to maximize cumulative reward.
+- **Heuristic Scheduling**: Scheduling using rule-based or empirical strategies (e.g., first-fit, best-fit) rather than learned or optimized models.
+- **Metadata**: In the context of AI jobs, metadata includes job size, model type, GPU count, expected runtime, and resource requests.
 
 ---
 
-# Day 145: Day 145: AI Infra System Design Topic 145
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 150: End-to-End AI Cluster Scheduling System Design (Integrating Network, Storage, Compute)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: End-to-End AI Cluster Scheduling System Design.
+- Core Examination Areas: Integrating network architecture, storage systems, and compute scheduling into a cohesive AI cluster management platform, ensuring performance, fault tolerance, and resource efficiency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **End-to-End Job Submission to Execution Time**: Target <30 seconds for a 64-GPU gang job to be scheduled and start execution, including network and storage attachment validation.
+- **Cluster-wide Utilization Target**: >75% GPU utilization across the cluster, with <5% job failure rate due to scheduling or resource fragmentation.
+- **Recovery SLA**: Time to recover from a node or storage failure and resume training, target <5 minutes with checkpoint recovery.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- *Unified Scheduling Platform*: A scheduler (e.g., Kubernetes + Volcano) that manages compute (GPU Pods), network (RDMA/NVLink topology labels), and storage (distributed file system or object storage attachments).
+- *Health and Monitoring Integrations*: Tools like Prometheus, Grafana, and NCCL/ storage benchmarks integrated into the scheduler to detect failures and trigger recovery or rescheduling.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Integrating Network Topology with Scheduling*: The scheduler uses node labels (e.g., `switch-domain`, `rack`, `nvlink-domain`) to place gang jobs optimally for All-Reduce performance.
+- *Integrating Storage with Scheduling*: Training Pods are scheduled on nodes that have access to the required storage (Lustre/MinIO mounts) and have sufficient local NVMe for caching or checkpointing.
 
+**5) Trade-off analysis**
+- *Centralized vs Distributed Scheduling Components*: A centralized scheduler (single Volcano instance) simplifies consistency but can become a bottleneck. Distributed scheduling components improve scalability but require careful coordination for gang scheduling and fairness.
+- *Performance Optimization vs Operational Complexity*: Highly optimized scheduling (topology-aware, RL-based, elastic) improves cluster efficiency but increases operational complexity and requires specialized expertise.
 
----
+**6) How to determine the optimal solution**
+- Design an end-to-end AI cluster platform using Kubernetes as the base orchestration layer, augmented with an AI-aware scheduler (Volcano/Kube-batch) for gang scheduling and fairness. Integrate topology labels for network-aware placement, ensure storage access via mounted distributed file systems or S3 gateways, and implement automated checkpoint recovery and health monitoring for fault tolerance.
 
-# Day 146: Day 146: AI Infra System Design Topic 146
+**7) Full names and explanations of all nouns and abbreviations**
+- **Prometheus**: An open-source systems monitoring and alerting toolkit.
+- **Grafana**: An open-source platform for monitoring and observability, often used with Prometheus for visualization.
+- **S3 Gateway**: A service that provides an S3-compatible interface to underlying storage systems, allowing AI workloads to use standard S3 APIs for data access.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+## Summary of Deliverable
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+- **What I did**: Generated the AI Infra System Design Training Question Set for Days 121-150 in English, covering the theme "Network Architecture, Storage Systems & Task Scheduling".
+- **What I accomplished**: Produced 30 days of structured training content, with each day including: (1) Topic and Core Examination Areas; (2) Requirement Clarification and Metric Definitions; (3) Core Architecture/Technical Component Design; (4) Deep Dive into Key Technologies and Possible Solutions; (5) Trade-off analysis; (6) How to determine the optimal solution; (7) Full names and explanations of all nouns and abbreviations.
+- **Files created or modified**: No external files were created; the complete content is provided in this response as Markdown-formatted text.
+- **Issues encountered**: None. The 30-day content was generated systematically following the exact 7-section structure required for each day.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 151: Secure Inference Architecture & Data Privacy
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Secure Inference Architecture and Data Privacy in AI Systems.
+- Core Examination Areas: Protecting user data during inference, secure model serving, encryption in transit and at rest, and privacy-preserving inference techniques.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **QPS (Queries Per Second)**: Target 10,000 QPS for a customer support LLM service.
+- **Latency Metrics**: TTFT (Time to First Token) must be < 200ms; TP99 latency (99th percentile latency) for full response generation must be < 2 seconds.
+- **Throughput (TPS)**: Target 5,000 tokens per second (TPS) overall throughput.
+- **Memory Size (HBM)**: GPU memory using HBM3 (High Bandwidth Memory version 3), e.g., 80GB per A100/H100 GPU.
+- **Data Privacy**: 100% of user PII (Personally Identifiable Information) must not be logged or stored in plaintext during inference.
 
+**3) Core Architecture/Technical Component Design**
+- **Inference Gateway**: API gateway with TLS 1.3 encryption for data in transit.
+- **Model Serving Layer**: Deployed on GPU clusters with HBM, using secure serving frameworks (e.g., vLLM, TensorRT-LLM).
+- **Data Sanitization Module**: Pre-processing layer to detect and redact PII before it reaches the model.
+- **Audit Logging**: Encrypted, immutable logs for access and inference requests without storing raw user data.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: On-Premises Secure Inference*: Models deployed in private data centers with strict network isolation.
+- *Solution B: Confidential Cloud Inference*: Using cloud providers' secure enclaves or TEE (Trusted Execution Environments).
+- *Comparative Analysis*: On-premises offers maximum control but high CAPEX. Confidential cloud offers elasticity and lower upfront costs but requires trust in the cloud provider's hardware security.
 
-# Day 147: Day 147: AI Infra System Design Topic 147
+**5) Trade-off Analysis**
+- **Security vs. Latency**: Encryption and PII redaction add computational overhead, potentially increasing TTFT by 10-50ms.
+- **Control vs. Cost**: On-premises TEE offers higher control but requires significant capital expenditure vs. cloud TEE which is OPEX-heavy but scalable.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to Determine the Optimal Solution**
+- Choose cloud TEE if the workload is bursty and requires auto-scaling, and if compliance allows cloud processing. Choose on-premises if data sensitivity is extreme (e.g., national security, highly regulated healthcare) and steady high QPS is expected.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **QPS**: Queries Per Second – the number of queries or requests a system processes per second.
+- **TTFT**: Time to First Token – the latency from sending a prompt to receiving the first generated token.
+- **TP99**: 99th Percentile Latency – the latency value below which 99% of requests fall.
+- **TPS**: Tokens Per Second – the throughput of token generation by the model.
+- **HBM**: High Bandwidth Memory – a type of computer memory used in GPUs for high-speed data access.
+- **PII**: Personally Identifiable Information – data that can identify a specific individual.
+- **TEE**: Trusted Execution Environment – a secure area of a main processor ensuring code and data are protected with respect to confidentiality and integrity.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 152: Adversarial Attacks and Defense Mechanisms in AI Infra
 
+**1) Topic and Core Examination Areas**
+- Topic: Adversarial Attacks and Defense Mechanisms in AI Infrastructure.
+- Core Examination Areas: Prompt injection, data poisoning, model evasion, and defensive architectures (input validation, adversarial training).
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **QPS**: 5,000 QPS for a public-facing chatbot.
+- **Latency Metrics**: TTFT < 300ms; TP99 < 3 seconds.
+- **Security Metric**: < 0.1% success rate for adversarial prompt injection attempts.
+- **Throughput (TPS)**: 3,000 tokens/second.
 
-# Day 148: Day 148: AI Infra System Design Topic 148
+**3) Core Architecture/Technical Component Design**
+- **Input Sanitization Layer**: Regex and NLP-based filters to detect malicious prompts.
+- **Model Isolation**: Separate inference endpoints for untrusted public inputs vs. internal trusted inputs.
+- **Monitoring & Alerting**: Anomaly detection system to flag unusual input patterns or sudden spikes in error rates.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Adversarial Training*: Retrain the model with adversarial examples to improve robustness.
+- *Solution B: Input/Output Guardrails*: Use a separate smaller model or rule-based system to validate inputs and outputs.
+- *Comparative Analysis*: Adversarial training improves inherent model robustness but is computationally expensive and requires continuous retraining. Guardrails are faster to deploy and update but can be bypassed by sophisticated attacks.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off Analysis**
+- **Robustness vs. Development Cost**: Adversarial training requires significant data collection and retraining cycles. Guardrails are cheaper but may introduce false positives, blocking legitimate user queries.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to Determine the Optimal Solution**
+- For high-risk applications (e.g., financial advice, healthcare), use a combination of both: adversarial training for the base model and strict input/output guardrails for the inference pipeline.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Prompt Injection**: An attack where malicious instructions are embedded in the input to manipulate the model's behavior.
+- **Data Poisoning**: Attacking the training data to corrupt the model's learning process.
+- **Model Evasion**: Crafting specific inputs to cause the model to make incorrect predictions.
+- **TP99**: 99th Percentile Latency.
+- **TTFT**: Time to First Token.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 153: Model Protection: Watermarking, Encryption, and IP Safeguarding
 
-# Day 149: Day 149: AI Infra System Design Topic 149
+**1) Topic and Core Examination Areas**
+- Topic: Model Protection, Watermarking, Encryption, and Intellectual Property (IP) Safeguarding.
+- Core Examination Areas: Preventing model stealing, ensuring model provenance, and securing model weights.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **QPS**: 2,000 QPS for a proprietary commercial model.
+- **Latency Metrics**: TTFT < 250ms; TP99 < 2.5 seconds.
+- **Protection Metric**: > 95% detection rate for generated content originating from the protected model.
+- **HBM Memory**: 80GB HBM3 per GPU node.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Model Encryption at Rest**: Weights encrypted using AES-256, decrypted only in TEE during inference.
+- **Output Watermarking**: Embedding statistical watermarks in generated text to prove model origin.
+- **API Obfuscation**: Rate limiting and request fingerprinting to detect scraping or model extraction attempts.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Statistical Watermarking*: Adds subtle statistical patterns to token selection.
+- *Solution B: Cryptographic Watermarking*: Uses cryptographic signatures embedded in the generation process.
+- *Comparative Analysis*: Statistical watermarking is invisible to users and has low overhead but can be degraded by post-processing. Cryptographic watermarking is robust but may require changes to the decoding process and can be harder to implement on third-party models.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off Analysis**
+- **Transparency vs. Security**: Strong cryptographic protection may require modifying the model's decoding loop, impacting compatibility. Statistical watermarks are transparent but less robust against intentional removal.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to Determine the Optimal Solution**
+- For proprietary models where IP protection is critical, use a combination: encrypt weights at rest/in-transit, deploy in TEE, and apply statistical watermarking to outputs.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **IP**: Intellectual Property – legal rights over creations of the mind (e.g., model weights, architecture).
+- **AES-256**: Advanced Encryption Standard with a 256-bit key – a symmetric encryption algorithm.
+- **TEE**: Trusted Execution Environment.
+- **HBM**: High Bandwidth Memory.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 150: Day 150: AI Infra System Design Topic 150
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 154: Federated Learning Infrastructure for Privacy-Preserving AI
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Federated Learning Infrastructure for Privacy-Preserving AI.
+- Core Examination Areas: Distributed model training without centralizing raw data, aggregation mechanisms, and communication efficiency.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Nodes**: 1,000 client devices (e.g., mobile phones, edge servers).
+- **Communication Metric**: Reduce round-trip communication overhead by > 80% compared to naive federated learning.
+- **Model Convergence**: Target convergence within 50 global training rounds.
+- **Privacy Metric**: Guarantee differential privacy with an epsilon (ε) value of ≤ 1.0.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Federated Server**: Central aggregator that receives model updates (gradients or weights), not raw data.
+- **Client Agents**: Local training modules on edge devices or regional data centers.
+- **Secure Aggregation Protocol**: Cryptographic protocols ensuring the server only sees the sum of updates, not individual contributions.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Federated Averaging (FedAvg)*: Simple averaging of model weights from clients.
+- *Solution B: Federated Learning with Differential Privacy (DP-FL)*: Adds noise to gradients to ensure individual data points cannot be reverse-engineered.
+- *Comparative Analysis*: FedAvg is efficient but risks privacy leaks. DP-FL provides strong privacy guarantees but requires careful noise tuning, which can slow convergence or reduce model accuracy.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Privacy vs. Model Accuracy**: Adding differential privacy noise reduces the risk of data leakage but can degrade model performance. Secure aggregation adds communication and cryptographic overhead.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- If the data is highly sensitive (e.g., medical records on edge devices), use DP-FL with secure aggregation. If speed of convergence is critical and data is less sensitive, use FedAvg with basic secure transmission.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Federated Learning (FL)**: A machine learning approach where models are trained across multiple decentralized edge devices or servers holding local data samples, without exchanging them.
+- **FedAvg**: Federated Averaging – a standard algorithm for federated learning that averages model updates from clients.
+- **Differential Privacy (DP)**: A system for publicly sharing information about a dataset by describing the patterns of groups within the dataset while withholding information about individuals.
+- **Epsilon (ε)**: A parameter in differential privacy that measures the privacy loss; lower values mean stronger privacy.
 
 ---
 
-## DAYS-151-180
 
-# Day 151: Day 151: AI Infra System Design Topic 151
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+================================================================================
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+### Day 155: Trusted Execution Environments (TEE) for AI Model Inference
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
+**1) Topic and Core Examination Areas**
+- Topic: Trusted Execution Environments (TEE) for AI Model Inference.
+- Core Examination Areas: Hardware-level security enclaves, attestation processes, and TEE-supported inference frameworks.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
+**2) Requirement Clarification and Metric Definitions**
+- **QPS**: 8,000 QPS for a financial forecasting LLM.
+- **Latency Metrics**: TTFT < 150ms; TP99 < 1.5 seconds.
+- **Overhead Metric**: TEE introduction should not increase inference latency by more than 10%.
+- **HBM**: 80GB HBM3 per GPU (if using GPU-based TEE like NVIDIA Hopper secure features).
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+**3) Core Architecture/Technical Component Design**
+- **TEE Hardware**: Intel SGX, AMD SEV, or NVIDIA Hopper Secure Workload features.
+- **Attestation Service**: Verifies the TEE's integrity before deploying the model or processing sensitive queries.
+- **Secure Inference Engine**: Modified model serving software (e.g., secure vLLM) that loads decrypted weights only inside the TEE.
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: CPU-based TEE (e.g., Intel SGX)*: Good for general compute, but limited GPU acceleration.
+- *Solution B: GPU-based TEE (e.g., NVIDIA Confidential Computing)*: Allows encrypted GPU memory and secure model execution on accelerators.
+- *Comparative Analysis*: CPU-based TEEs are mature but slow for heavy matrix operations. GPU-based TEEs are essential for LLM inference but have higher hardware costs and limited ecosystem support.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
+**5) Trade-off Analysis**
+- **Performance vs. Security**: GPU TEEs provide security for acceleration but may have 5-15% performance overhead due to encryption/decryption cycles and attestation latency.
 
+**6) How to Determine the Optimal Solution**
+- For LLM inference requiring high QPS and low latency, GPU-based TEE is necessary despite the overhead. For smaller models or non-accelerator workloads, CPU-based TEE may suffice.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **TEE**: Trusted Execution Environment – a secure area of a main processor ensuring code and data are protected.
+- **Intel SGX**: Software Guard Extensions – Intel's TEE technology for enclaving application data and code.
+- **AMD SEV**: Secure Encrypted Virtualization – AMD's technology for encrypting VM memory.
+- **Attestation**: The process of verifying that a TEE is running genuine, unmodified software in a secure hardware environment.
+
 ---
 
-# Day 152: Day 152: AI Infra System Design Topic 152
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 156: Zero Trust Architecture for AI/ML Platforms
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Zero Trust Architecture (ZTA) for AI/ML Platforms.
+- Core Examination Areas: "Never trust, always verify" principles, micro-segmentation, identity and access management (IAM) for AI services.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Users/Services**: 500 internal developers, 10,000 API consumers.
+- **Authentication Metric**: 100% of API and internal access requires multi-factor authentication (MFA) or service-to-service mTLS.
+- **Latency Impact**: ZTA authentication overhead should add < 5ms per request.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Identity Provider (IdP)**: Centralized IAM system issuing short-lived tokens.
+- **Service Mesh**: Enforces mTLS (mutual TLS) between all microservices (gateway, sanitizer, model server).
+- **Policy Enforcement Points (PEPs)**: Gateways that validate every request against zero trust policies.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: mTLS (Mutual TLS)*: Both client and server authenticate each other using certificates.
+- *Solution B: JWT-based Token Validation*: JSON Web Tokens with short expiration and strict scope validation.
+- *Comparative Analysis*: mTLS provides strong machine-to-machine authentication but requires certificate management. JWT is easier to implement but relies on secure token distribution and validation infrastructure.
 
+**5) Trade-off Analysis**
+- **Security vs. Complexity**: mTLS offers superior security for service-to-service communication but increases operational complexity (certificate rotation, key management). JWT is simpler but can be vulnerable if tokens are stolen.
 
----
+**6) How to Determine the Optimal Solution**
+- Use a hybrid approach: mTLS for internal microservice communication (model server to sanitizer) and JWT/OAuth2 for external API consumers, with strict rate limiting and scope validation.
 
-# Day 153: Day 153: AI Infra System Design Topic 153
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **ZTA**: Zero Trust Architecture – a security model that requires strict identity verification for every person and device trying to access resources.
+- **IAM**: Identity and Access Management – frameworks and systems for managing digital identities and their access.
+- **MFA**: Multi-Factor Authentication – an security system requiring more than one method of authentication.
+- **mTLS**: Mutual Transport Layer Security – a method for securing network communications where both client and server authenticate each other.
+- **JWT**: JSON Web Token – a compact, URL-safe means of representing claims to be transferred between two parties.
+- **PEP**: Policy Enforcement Point – a component that enforces access control decisions.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 157: API Security and Rate Limiting for LLM Services
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: API Security and Rate Limiting for Large Language Model (LLM) Services.
+- Core Examination Areas: Preventing abuse, DDoS protection, token-based rate limiting, and anomaly detection.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **QPS**: 20,000 QPS peak capacity.
+- **Rate Limit**: 100 requests per minute per user tier; 1,000 requests per minute for enterprise tier.
+- **Latency Metrics**: TTFT < 200ms; TP99 < 2 seconds.
+- **Abuse Detection**: Identify and block > 95% of malicious scraping or prompt injection attempts within 100ms of request arrival.
 
+**3) Core Architecture/Technical Component Design**
+- **API Gateway**: Implements rate limiting, authentication, and initial request validation.
+- **Token Bucket Algorithm**: Used for rate limiting to allow burst traffic within defined limits.
+- **WAF (Web Application Firewall)**: Filters malicious payloads and known attack patterns.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Token Bucket Rate Limiting*: Allows bursts up to a bucket capacity, then regulates at a fixed rate.
+- *Solution B: Leaky Bucket Rate Limiting*: Processes requests at a constant rate, queuing excess requests.
+- *Comparative Analysis*: Token bucket is better for LLMs because generation bursts are natural; leaky bucket is better for smoothing out traffic but may increase latency for legitimate bursty queries.
 
-# Day 154: Day 154: AI Infra System Design Topic 154
+**5) Trade-off Analysis**
+- **Burst Tolerance vs. Fairness**: Token buckets allow fair bursts but can be gamed by coordinated attacks. Leaky buckets ensure steady processing but may penalize legitimate users with bursty conversation patterns.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to Determine the Optimal Solution**
+- For LLM inference, token bucket rate limiting is generally optimal as it matches the natural bursty nature of text generation. Combine with WAF and anomaly detection for comprehensive API security.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **LLM**: Large Language Model – a language model comprising a neural network with many parameters, trained on large quantities of unlabeled text using self-supervised learning or semi-supervised training.
+- **DDoS**: Distributed Denial of Service – a malicious attempt to disrupt the normal traffic of a targeted server, service, or network.
+- **WAF**: Web Application Firewall – a specific type of firewall that monitors and filters HTTP traffic to and from a web application.
+- **Token Bucket**: A rate limiting algorithm that allows bursts of traffic up to a certain capacity, then limits to a fixed rate.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 158: Data Sanitization and PII Removal Pipelines
 
+**1) Topic and Core Examination Areas**
+- Topic: Data Sanitization and PII (Personally Identifiable Information) Removal Pipelines.
+- Core Examination Areas: NLP-based PII detection, redaction techniques, and ensuring no data leakage in training or inference logs.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput**: Sanitization pipeline must handle 50,000 documents per minute.
+- **Accuracy Metric**: > 99% precision and recall for PII detection (names, emails, phone numbers, SSNs).
+- **Latency**: Sanitization overhead must be < 50ms per document.
 
-# Day 155: Day 155: AI Infra System Design Topic 155
+**3) Core Architecture/Technical Component Design**
+- **PII Detection Module**: Uses rule-based regex and ML models (e.g., spaCy NER, custom classifiers) to identify PII.
+- **Redaction Engine**: Replaces PII with synthetic placeholders or anonymized tokens.
+- **Verification Layer**: Secondary pass to ensure no PII remnants exist in the sanitized output.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Rule-Based (Regex)*: Fast and deterministic for structured PII (emails, SSNs).
+- *Solution B: ML-Based NER (Named Entity Recognition)*: Better for unstructured names and organizations but requires more compute.
+- *Comparative Analysis*: Rule-based is fast and precise for formats but fails on context. ML-NER understands context but has higher latency and potential false positives/negatives.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off Analysis**
+- **Speed vs. Accuracy**: Regex is instant but incomplete. ML-NER is comprehensive but adds 20-30ms latency. A hybrid approach uses regex for formats and ML for context.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to Determine the Optimal Solution**
+- Use a hybrid pipeline: apply fast regex filters first for structured data (emails, phone numbers), then pass the text through an NER model for names and organizations, followed by a verification pass.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **PII**: Personally Identifiable Information.
+- **NER**: Named Entity Recognition – a subtask of information extraction that seeks to locate and classify named entities mentioned in unstructured text into pre-defined categories.
+- **spaCy**: An open-source software library for advanced Natural Language Processing in Python and Cython.
+- **Precision and Recall**: Metrics for model evaluation. Precision is the ratio of correctly predicted positive observations to the total predicted positives. Recall is the ratio of correctly predicted positive observations to all observations in the actual class.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 159: Supply Chain Security for AI Models and Dependencies (SBOM)
 
-# Day 156: Day 156: AI Infra System Design Topic 156
+**1) Topic and Core Examination Areas**
+- Topic: Supply Chain Security for AI Models and Dependencies, Software Bill of Materials (SBOM).
+- Core Examination Areas: Model provenance, dependency vulnerability scanning, and securing the AI supply chain.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Components**: Track all dependencies (libraries, frameworks, pre-trained models, datasets).
+- **Vulnerability Metric**: < 0.1% of deployed models contain dependencies with known critical CVEs (Common Vulnerabilities and Exposures).
+- **Scanning Latency**: SBOM generation and scanning must complete within 5 minutes for a model package.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **SBOM Generator**: Tooling (e.g., CycloneDX, SPDX) to create explicit lists of components used in the model and serving stack.
+- **Vulnerability Scanner**: Integrates with CVE databases to scan dependencies and model formats (e.g., PyTorch, TensorFlow, Hugging Face models).
+- **Model Registry with Provenance**: Stores models with cryptographic hashes and metadata about their training data and origin.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: SPDX (Software Package Data Exchange)*: Standard format for SBOMs, widely adopted.
+- *Solution B: CycloneDX*: Focuses on security and supply chain component analysis, integrates well with vulnerability scanners.
+- *Comparative Analysis*: SPDX is a comprehensive standard for documentation. CycloneDX is more focused on runtime security and vulnerability mapping. Both are complementary.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off Analysis**
+- **Comprehensiveness vs. Overhead**: Generating detailed SBOMs for AI models (including datasets and hyperparameters) adds process overhead but is critical for compliance and security auditing.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to Determine the Optimal Solution**
+- Use CycloneDX for runtime vulnerability mapping and SPDX for formal documentation and compliance. Integrate SBOM generation into the CI/CD pipeline for model packaging.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **SBOM**: Software Bill of Materials – a formal record containing the details and supply chain relationships of various components used in building software.
+- **CVE**: Common Vulnerabilities and Exposures – a dictionary of publicly known cybersecurity vulnerabilities.
+- **SPDX**: Software Package Data Exchange – an open standard format for communicating software bill of materials.
+- **CycloneDX**: A lightweight SBOM standard designed for use in application security contexts and supply chain component analysis.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 157: Day 157: AI Infra System Design Topic 157
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 160: Incident Response and Threat Modeling for AI Systems
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Incident Response and Threat Modeling for AI Systems.
+- Core Examination Areas: AI-specific threat vectors (model inversion, data extraction), incident playbooks, and continuous threat monitoring.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **MTTD (Mean Time to Detect)**: < 15 minutes for anomalous inference patterns or data exfiltration attempts.
+- **MTTR (Mean Time to Respond)**: < 1 hour for isolating a compromised model endpoint or rotating credentials.
+- **Monitoring Coverage**: 100% of inference APIs and training pipelines must emit security and performance logs.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **SIEM (Security Information and Event Management)**: Aggregates logs from model servers, gateways, and data pipelines.
+- **Threat Modeling Framework**: STRIDE or MITRE ATT&CK for AI to categorize potential threats.
+- **Incident Response Playbooks**: Automated scripts for isolating endpoints, revoking tokens, and rolling back model versions.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: MITRE ATT&CK for AI*: Adapts the known attacker tactics, techniques, and procedures to AI-specific systems.
+- *Solution B: STRIDE Threat Modeling*: Categorizes threats by Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege.
+- *Comparative Analysis*: MITRE ATT&CK for AI is offensive-focused (how attackers act). STRIDE is design-focused (what security properties to verify during architecture). They are complementary.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Proactive vs. Reactive**: Threat modeling (STRIDE/MITRE) is proactive and requires upfront design effort. SIEM and playbooks are reactive but essential for minimizing MTTR during an actual incident.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- Use STRIDE during the architecture phase to design secure AI systems, and MITRE ATT&CK for AI to guide threat monitoring and incident response playbooks.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **MTTD**: Mean Time to Detect – the average time it takes to detect a security incident or threat.
+- **MTTR**: Mean Time to Respond/Resolve – the average time it takes to respond to and resolve a security incident.
+- **SIEM**: Security Information and Event Management – a solution that aggregates and analyzes log data from an organization's entire IT infrastructure.
+- **MITRE ATT&CK**: A knowledge base of adversary tactics and techniques based on real-world observations.
+- **STRIDE**: A threat modeling design framework (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege).
 
 ---
 
-# Day 158: Day 158: AI Infra System Design Topic 158
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 161: GDPR and Data Residency Compliance for AI Training/Inference
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: GDPR and Data Residency Compliance for AI Training and Inference.
+- Core Examination Areas: Right to be forgotten, data localization, cross-border data transfer restrictions, and compliant data retention policies.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Data Residency**: All EU user data must be processed and stored within the European Economic Area (EEA).
+- **Deletion Metric**: User data deletion requests (Right to Erasure) must be processed and confirmed within 30 days, with data removed from all training datasets and caches.
+- **QPS**: 15,000 QPS for a pan-European service.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Geo-Routing Layer**: DNS and API gateway routing based on user IP to ensure data stays within the EEA.
+- **Data Retention Engine**: Automated lifecycle management to delete or anonymize data after the legal retention period.
+- **Federated/Local Training**: Training models on EEA-only data slices without exporting raw data to other regions.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Regional Cloud Deployments*: Run separate AI infrastructure instances in each required region (e.g., AWS eu-west-1 for Ireland).
+- *Solution B: Data Fabric with Localization Policies*: A logical data layer that enforces residency rules regardless of physical storage location.
+- *Comparative Analysis*: Regional deployments are explicit and compliant by design but increase infrastructure costs. Data fabric offers flexibility but requires strict policy enforcement to avoid compliance failures.
 
+**5) Trade-off Analysis**
+- **Cost vs. Compliance**: Regional deployments multiply infrastructure costs (duplicate GPU clusters, storage). Data fabric reduces duplication but increases software complexity and audit risk.
 
----
+**6) How to Determine the Optimal Solution**
+- For strict GDPR compliance with high QPS, regional cloud deployments (Solution A) are the safest and most auditable approach, despite the higher CAPEX/OPEX.
 
-# Day 159: Day 159: AI Infra System Design Topic 159
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **GDPR**: General Data Protection Regulation – a regulation in EU law on data protection and privacy.
+- **EEA**: European Economic Area – the 27 EU member states plus Iceland, Liechtenstein, and Norway.
+- **Right to Erasure**: Also known as the "right to be forgotten," a provision under GDPR allowing individuals to request the deletion of their personal data.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 162: EU AI Act Compliance Infrastructure Requirements
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: EU AI Act Compliance Infrastructure Requirements.
+- Core Examination Areas: Risk categorization of AI systems, transparency requirements, high-risk AI system auditing, and conformity assessment.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Risk Category**: Identify if the AI system is "High Risk" (e.g., hiring, credit scoring) or "Limited Risk" (e.g., chatbots).
+- **Transparency Metric**: 100% of user interactions with limited-risk generative AI must be marked as AI-generated.
+- **Audit Log Retention**: High-risk AI systems must retain inference logs and model version metadata for at least 5 years.
 
+**3) Core Architecture/Technical Component Design**
+- **Risk Classification Module**: Metadata tag applied to models at registration, dictating compliance checks.
+- **Watermarking & Disclosure Layer**: Ensures AI-generated content is labeled.
+- **Conformity Assessment Logging**: Immutable logs capturing model version, input/output samples (anonymized), and decision rationales for high-risk systems.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Explicit Risk Tagging in Model Registry*: Each model has a compliance status field updated by legal/compliance teams.
+- *Solution B: Automated Risk Assessment via Metadata Analysis*: ML model that analyzes model capabilities and use cases to suggest a risk category.
+- *Comparative Analysis*: Explicit tagging is legally defensible but requires manual process. Automated assessment is scalable but may require regulatory approval of the assessment logic itself.
 
-# Day 160: Day 160: AI Infra System Design Topic 160
+**5) Trade-off Analysis**
+- **Legal Defensibility vs. Automation**: Manual risk tagging provides clear audit trails for regulators. Automated assessment is efficient but introduces uncertainty about the validity of the classification.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to Determine the Optimal Solution**
+- Use explicit risk tagging in the model registry for high-risk systems to ensure legal defensibility. Use automated metadata analysis as a assistive tool for compliance teams to review and confirm classifications.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **EU AI Act**: The European Union's regulatory framework for artificial intelligence, categorizing AI systems by risk level.
+- **High-Risk AI**: AI systems that pose significant risks to health, safety, or fundamental rights (e.g., critical infrastructure, education, employment).
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 163: Model Cards, Documentation, and Audit Trails
 
+**1) Topic and Core Examination Areas**
+- Topic: Model Cards, Documentation, and Audit Trails.
+- Core Examination Areas: Standardized model documentation, performance metrics disclosure, limitation statements, and immutable audit logs.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Model Card Coverage**: 100% of production models must have a Model Card with training data sources, intended use, and known limitations.
+- **Audit Trail Metric**: All model version changes, training runs, and major inference configuration changes must be logged with user ID and timestamp.
 
-# Day 161: Day 161: AI Infra System Design Topic 161
+**3) Core Architecture/Technical Component Design**
+- **Model Registry with Card Support**: Stores models alongside their documentation (MD or JSON format).
+- **Immutable Audit Ledger**: Uses append-only logs or blockchain-style hashing to ensure audit trails cannot be tampered with.
+- **Documentation Generator**: CI/CD tool that extracts metadata (framework, version, metrics) to auto-generate parts of the Model Card.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Markdown/JSON Model Cards*: Human-readable and machine-parsable documentation stored with the model.
+- *Solution B: Dedicated Model Governance Platform*: Centralized SaaS or on-prem platform for model documentation, approval workflows, and audit trails.
+- *Comparative Analysis*: Markdown/JSON is lightweight and integrates with Git. Governance platforms offer workflow enforcement and compliance reporting but add cost and vendor lock-in.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off Analysis**
+- **Flexibility vs. Enforcement**: Git-based Model Cards are flexible and free but rely on developer discipline. Governance platforms enforce compliance but are complex to set up and maintain.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to Determine the Optimal Solution**
+- For small to mid-sized teams, Git-based Model Cards with CI/CD validation are sufficient. For enterprise compliance (SOC 2, EU AI Act), a dedicated Model Governance Platform is recommended.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Model Card**: A documentation template for machine learning models, similar to a nutrition label, providing details about model training, evaluation, and use.
+- **CI/CD**: Continuous Integration / Continuous Deployment – practices and tools for frequently delivering software changes to production.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 164: Bias Detection and Fairness Monitoring Infrastructure
 
-# Day 162: Day 162: AI Infra System Design Topic 162
+**1) Topic and Core Examination Areas**
+- Topic: Bias Detection and Fairness Monitoring Infrastructure.
+- Core Examination Areas: Measuring model bias across demographic groups, continuous fairness monitoring, and mitigation strategies.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Monitoring Frequency**: Fairness metrics computed and alerted on for all high-risk model inferences daily.
+- **Fairness Metric**: Disparate impact ratio or equalized odds difference must be within 0.9 to 1.1 across protected groups.
+- **QPS**: 10,000 QPS for a hiring recommendation LLM.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Fairness Evaluation Pipeline**: Batch process that evaluates model outputs on a representative dataset segmented by demographic attributes.
+- **Real-Time Monitoring**: Anonymized inference metadata (not raw PII) used to detect drift in fairness metrics over time.
+- **Alerting System**: Notifications to ML ops and compliance teams if fairness metrics fall outside acceptable thresholds.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Pre-processing Mitigation*: Adjust training data to balance representation across groups.
+- *Solution B: In-processing Mitigation*: Add fairness constraints to the model's loss function during training.
+- *Solution C: Post-processing Mitigation*: Adjust model outputs or thresholds to ensure fair outcomes across groups.
+- *Comparative Analysis*: Pre-processing requires retraining data. In-processing is complex to implement with LLMs. Post-processing is easiest to deploy in inference pipelines but may reduce overall accuracy.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off Analysis**
+- **Accuracy vs. Fairness**: Enforcing fairness constraints often reduces overall model accuracy or utility. The trade-off must be calibrated based on legal and ethical requirements.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to Determine the Optimal Solution**
+- For production LLMs where retraining is costly, combine in-processing (if feasible during fine-tuning) with post-processing monitoring and threshold adjustment. Use pre-processing for foundational model training.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Disparate Impact Ratio**: A measure used to determine if a selection process has a significantly different outcome for members of a protected class.
+- **Equalized Odds**: A fairness criterion requiring that the true positive rate and false positive rate are equal across different groups.
+- **Drift**: Data drift or concept drift refers to the change in the statistical properties of the input data or the relationship between inputs and outputs over time.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 163: Day 163: AI Infra System Design Topic 163
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 165: Data Lineage and Provenance Tracking Systems
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Data Lineage and Provenance Tracking Systems.
+- Core Examination Areas: Tracing data from source through training to inference, ensuring transparency, and supporting compliance audits.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Lineage Completeness**: 100% of training datasets must have traceable provenance to the original source.
+- **Query Latency**: Lineage lookup for a specific model version must complete in < 2 seconds.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Data Catalog**: Centralized metadata store documenting datasets, their sources, transformations, and usage.
+- **Provenance Graph**: Directed acyclic graph (DAG) representing the flow of data from sources through preprocessing, training, and evaluation.
+- **Integration with ML Platforms**: Hooks into training pipelines (e.g., Kubeflow, MLflow) to automatically capture lineage metadata.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: MLflow Artifacts and Runs*: Tracks experiments, code, and data versions within the MLflow ecosystem.
+- *Solution B: Dedicated Data Lineage Tools (e.g., Apache Atlas, DataHub)*: Enterprise-grade lineage tracking across the entire data estate.
+- *Comparative Analysis*: MLflow is excellent for model-centric lineage but limited in enterprise data pipeline coverage. DataHub/Atlas provide full data estate lineage but require significant setup and integration effort.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Scope vs. Implementation Cost**: MLflow is easy to adopt for ML teams but doesn't cover upstream data engineering. DataHub covers everything but requires cross-team coordination and infrastructure investment.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- For ML team autonomy and rapid experimentation, use MLflow. For enterprise compliance and full data estate visibility, integrate MLflow with a dedicated data lineage tool like DataHub or Apache Atlas.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Provenance**: The origin or source of something; in data, it refers to the history of data's creation and transformations.
+- **DAG**: Directed Acyclic Graph – a graph with directed edges and no cycles, commonly used to represent workflows or data flows.
+- **MLflow**: An open-source platform for the machine learning lifecycle, including experimentation, reproducibility, and deployment.
 
 ---
 
-# Day 164: Day 164: AI Infra System Design Topic 164
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 166: SOC 2 and ISO 27001 Compliance for AI Cloud Platforms
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: SOC 2 and ISO 27001 Compliance for AI Cloud Platforms.
+- Core Examination Areas: Security, availability, processing integrity, confidentiality, and privacy principles; information security management systems (ISMS).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Availability Metric**: 99.9% uptime for AI inference services.
+- **Audit Readiness**: All access logs, configuration changes, and security events must be retained for 1 year (SOC 2) or 3 years (ISO 27001 recommendation).
+- **Incident Response**: Security incidents must be reported to customers within 72 hours if they affect data confidentiality.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **ISMS (Information Security Management System)**: Policies and procedures documented and enforced across the AI platform.
+- **Access Review Automation**: Quarterly automated audits of user and service permissions.
+- **Encryption Standards**: Enforce AES-256 for data at rest and TLS 1.3 for data in transit, with key management via KMS (Key Management Service).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: SOC 2 Type II*: Focuses on the operational effectiveness of controls over a period of time (typically 6-12 months).
+- *Solution B: ISO 27001 Certification*: International standard for ISMS, focuses on risk management and continuous improvement.
+- *Comparative Analysis*: SOC 2 is widely required by US tech customers and focuses on specific trust services criteria. ISO 27001 is a global standard and often required in Europe and Asia. Both require similar security controls but differ in audit methodology.
 
+**5) Trade-off Analysis**
+- **Market Focus vs. Global Standard**: SOC 2 is sufficient for US SaaS customers. ISO 27001 is better for global enterprise contracts. Achieving both doubles the audit effort but maximizes market access.
 
----
+**6) How to Determine the Optimal Solution**
+- Start with SOC 2 Type II if the primary customer base is in North America. Pursue ISO 27001 concurrently if serving European or Asian enterprise clients, or if required by specific industry regulations.
 
-# Day 165: Day 165: AI Infra System Design Topic 165
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **SOC 2**: Service Organization Control 2 – a framework for managing customer data based on five trust service principles.
+- **ISO 27001**: International Organization for Standardization standard for information security management systems.
+- **ISMS**: Information Security Management System – a systematic approach to managing sensitive company information.
+- **KMS**: Key Management Service – a cryptographic service that creates and controls cryptographic keys.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 167: Financial and Healthcare AI Compliance (HIPAA, SOX)
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Financial and Healthcare AI Compliance (HIPAA, SOX).
+- Core Examination Areas: Protected Health Information (PHI) handling, financial data auditability, and sector-specific AI use restrictions.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **HIPAA Compliance**: 100% of healthcare data must be encrypted, with access logs retained for 6 years.
+- **SOX Compliance**: Financial model predictions used in reporting must have immutable audit trails and change control documentation.
+- **QPS**: 5,000 QPS for a healthcare triage LLM.
 
+**3) Core Architecture/Technical Component Design**
+- **BAA (Business Associate Agreement) Infrastructure**: Technical and organizational measures to ensure compliance when handling PHI.
+- ** PHI De-identification Pipeline**: Removes or encrypts PHI before it enters the model training or inference pipeline.
+- **Change Control System**: Tracks all model updates affecting financial reporting, requiring approval workflows.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: On-Premises or VPC-Isolated Deployments*: Keep PHI within a private, audited network environment.
+- *Solution B: HIPAA-Compliant Cloud Services*: Use cloud providers' designated compliant services with BAAs in place.
+- *Comparative Analysis*: On-premises offers maximum control but high CAPEX. Compliant cloud services offer scalability and reduced operational burden but require careful configuration to maintain compliance.
 
-# Day 166: Day 166: AI Infra System Design Topic 166
+**5) Trade-off Analysis**
+- **Control vs. Scalability**: On-premises HIPAA compliance is rigid but fully controlled. Cloud BAA services are scalable but depend on the provider's security posture and shared responsibility model.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to Determine the Optimal Solution**
+- For most modern AI infra, using HIPAA-compliant cloud services with proper VPC isolation and encryption is optimal, balancing scalability with compliance. Ensure a BAA is signed with the cloud provider.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **HIPAA**: Health Insurance Portability and Accountability Act – US legislation providing data privacy and security provisions for safeguarding medical information.
+- **SOX**: Sarbanes-Oxley Act – US law setting enhanced standards for all US public company boards, management, and public accounting firms.
+- **PHI**: Protected Health Information – any information about health status, provision of health care, or payment for health care that can be linked to a specific individual.
+- **BAA**: Business Associate Agreement – a contract required under HIPAA to ensure that a vendor handling PHI will appropriately safeguard the information.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 168: Model Risk Management (MRM) and Validation Infrastructure
 
+**1) Topic and Core Examination Areas**
+- Topic: Model Risk Management (MRM) and Validation Infrastructure.
+- Core Examination Areas: Model validation frameworks, independent testing, performance monitoring, and governance for high-risk models.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Validation Frequency**: High-risk models must undergo independent validation annually or after significant retraining.
+- **Performance Degradation Threshold**: Model accuracy or fairness metrics must not degrade by more than 5% from the baseline validation metrics.
+- **Approval Workflow**: All model deployments to production require MRM sign-off.
 
-# Day 167: Day 167: AI Infra System Design Topic 167
+**3) Core Architecture/Technical Component Design**
+- **MRM Portal**: Centralized system for model documentation, validation reports, and approval workflows.
+- **Independent Validation Environment**: Sandbox environment where validation teams can test model versions without affecting production.
+- **Continuous Monitoring Dashboard**: Tracks production performance metrics against validation baselines.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Custom MRM Workflow System*: Built on top of existing ML platforms (e.g., custom Jira/Confluence integrations for approval).
+- *Solution B: Dedicated MRM Software (e.g., ModelOps platforms)*: Enterprise solutions designed specifically for model risk governance.
+- *Comparative Analysis*: Custom workflows are flexible and integrate with existing tools but require maintenance and may lack standard compliance reports. Dedicated MRM software offers out-of-the-box compliance features but can be costly and rigid.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off Analysis**
+- **Customization vs. Compliance Ready**: Custom systems can be tailored to specific organizational needs but require internal expertise to ensure they meet regulatory standards. Dedicated MRM software is compliance-ready but may not fit unique workflows.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to Determine the Optimal Solution**
+- For financial or healthcare institutions with strict regulatory scrutiny, dedicated MRM software is recommended to ensure auditability and reduce compliance risk. For internal, non-regulated models, custom workflows may suffice.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **MRM**: Model Risk Management – a governance framework for managing risks associated with the development and use of quantitative models.
+- **ModelOps**: A set of processes and technologies that manage the operational lifecycle of AI and machine learning models.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 169: Multi-Tenant Isolation and Tenant-Specific Compliance
 
-# Day 168: Day 168: AI Infra System Design Topic 168
+**1) Topic and Core Examination Areas**
+- Topic: Multi-Tenant Isolation and Tenant-Specific Compliance.
+- Core Examination Areas: Logical and physical isolation of tenant data, ensuring compliance boundaries are maintained in multi-cloud or multi-tenant SAI (Software AI) platforms.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Tenants**: 100 enterprise tenants, each with potentially different compliance requirements (GDPR, HIPAA, SOC 2).
+- **Isolation Metric**: 100% data isolation – no tenant can access another tenant's data or model configurations.
+- **QPS per Tenant**: Up to 5,000 QPS for enterprise tenants.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **Tenant ID in Request Pipeline**: Every inference request includes a tenant ID, used for routing, logging, and access control.
+- **Logical Isolation via Metadata**: Databases and storage use tenant_id filters to ensure data separation.
+- **Physical Isolation for High-Compliance Tenants**: Dedicated GPU clusters or VPCs for tenants requiring HIPAA or strict data residency.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Logical Isolation (Multi-tenant DB with row-level security)*: Cost-effective, shares infrastructure.
+- *Solution B: Physical Isolation (Separate clusters/VPCs per tenant)*: Maximum security and compliance, higher cost.
+- *Comparative Analysis*: Logical isolation is efficient but relies on software enforcement; a bug could cause data leakage. Physical isolation is inherently secure but scales poorly and increases CAPEX.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off Analysis**
+- **Cost vs. Security/Compliance**: Logical isolation minimizes infrastructure costs but requires rigorous testing and monitoring to prevent isolation failures. Physical isolation guarantees separation but multiplies infrastructure costs.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to Determine the Optimal Solution**
+- Use logical isolation with strict row-level security and automated penetration testing for standard tenants. Offer physical isolation (dedicated VPC/cluster) as a premium option for high-compliance tenants (HIPAA, GDPR strict residency).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Multi-Tenant**: An architecture where a single instance of software and its supporting environment serves multiple customers or tenants.
+- **VPC**: Virtual Private Cloud – a virtual network dedicated to the user's AWS account (or equivalent in other clouds).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 169: Day 169: AI Infra System Design Topic 169
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 170: Compliance Automation and Policy-as-Code for AI Infra
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Compliance Automation and Policy-as-Code for AI Infrastructure.
+- Core Examination Areas: Encoding compliance rules into executable policies, automated auditing, and continuous compliance monitoring.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Policy Coverage**: 100% of infrastructure and model deployment configurations must be validated against compliance policies before deployment.
+- **Audit Frequency**: Continuous compliance checks, with reports generated weekly.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Policy Engine**: Evaluates infrastructure code (Terraform, Kubernetes manifests) and model metadata against compliance rules.
+- **CI/CD Gate**: Blocks deployments that fail policy checks.
+- **Compliance Dashboard**: Visualizes policy violations and compliance status across the AI estate.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Open Policy Agent (OPA)*: A general-purpose policy engine that uses a high-level declarative language (Rego).
+- *Solution B: Cloud-Native Policy Tools (e.g., AWS Config, Azure Policy)*: Provider-specific compliance checking tools.
+- *Comparative Analysis*: OPA is cloud-agnostic and can policy-check code, APIs, and models. Cloud-native tools are easier to set up within a specific cloud but do not work across multi-cloud environments.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Portability vs. Ease of Use**: OPA provides multi-cloud portability but requires learning Rego and maintaining policy code. Cloud-native tools are easier to use but lock you into a specific provider.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- For multi-cloud or cloud-agnostic AI platforms, use OPA with Rego policies. For single-cloud deployments where speed to compliance is critical, use the cloud provider's native policy tools.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Policy-as-Code**: The practice of managing and enforcing compliance and security policies using code that can be version-controlled and automated.
+- **OPA**: Open Policy Agent – an open-source, general-purpose policy engine that unifies policy enforcement across the stack.
+- **Rego**: The policy language used by Open Policy Agent.
 
 ---
 
-# Day 170: Day 170: AI Infra System Design Topic 170
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 171: FinOps for AI: Cost Monitoring and Optimization Strategies
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: FinOps for AI: Cost Monitoring and Optimization Strategies.
+- Core Examination Areas: Tracking AI compute costs, cost allocation by model/project, and identifying waste in GPU utilization.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Cost Visibility**: 100% of GPU hours must be allocable to a specific project, model, or cost center.
+- **Utilization Metric**: Target average GPU utilization > 60% for training jobs and > 70% for inference clusters.
+- **Cost Reduction Target**: 20% reduction in AI infrastructure spend over 6 months through optimization.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Cost Telemetry Layer**: Integrates with cloud billing APIs and cluster monitoring (e.g., Prometheus, GPU metrics) to track cost per query or per training run.
+- **Tagging Enforcement**: Mandatory labels (project, model, environment) on all infrastructure resources.
+- **Cost Alerting**: Notifications when cost per QPS or cost per training epoch exceeds thresholds.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Cloud Cost Management Tools (e.g., AWS Cost Explorer, GCP Cost Management)*: Native tools for billing and allocation.
+- *Solution B: FinOps Platforms (e.g., CloudZero, Datadog Cost Management)*: Third-party tools with ML-driven anomaly detection and unit economics (cost per QPS).
+- *Comparative Analysis*: Native tools are free or included but lack AI-specific unit economics. FinOps platforms offer advanced analytics and AI cost attribution but add subscription costs.
 
+**5) Trade-off Analysis**
+- **Depth of Insight vs. Cost**: FinOps platforms provide detailed unit economics (cost per inference) but require investment. Native tools provide basic cost allocation but may not correlate costs with AI metrics like QPS or TTFT.
 
----
+**6) How to Determine the Optimal Solution**
+- Start with cloud-native cost management and strict tagging. If AI spend is significant and complex, invest in a FinOps platform that supports AI unit economics (cost per token, cost per QPS).
 
-# Day 171: Day 171: AI Infra System Design Topic 171
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **FinOps**: Financial Operations – a cultural practice and set of processes that brings financial accountability to the variable spend model of cloud, enabling data-driven business decisions.
+- **QPS**: Queries Per Second.
+- **TTFT**: Time to First Token.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+---
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+================================================================================
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+### Day 172: Spot Instances and Fault-Tolerant Training Architectures
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**1) Topic and Core Examination Areas**
+- Topic: Spot Instances and Fault-Tolerant Training Architectures.
+- Core Examination Areas: Leveraging discounted cloud compute, handling preemption, and ensuring training jobs can resume without losing progress.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**2) Requirement Clarification and Metric Definitions**
+- **Cost Savings Target**: 60-70% reduction in compute costs using spot instances for training.
+- **Checkpoint Frequency**: Save training checkpoints every 10 minutes or every 1,000 steps.
+- **Preemption Tolerance**: Training jobs must handle instance preemption with < 10 minutes of lost progress.
 
+**3) Core Architecture/Technical Component Design**
+- **Checkpointing System**: Frequent saves of model weights, optimizer state, and training state to durable storage (e.g., S3, GCS).
+- **Orchestrator with Preemption Handling**: Kubernetes with Volcano or Spot.io, which detects preemption signals and reschedules jobs.
+- **Fault-Tolerant Training Framework**: PyTorch Distributed with checkpoint resume capabilities.
 
----
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Frequent Checkpointing to Local SSD then Async to Object Storage*: Fast local saves, asynchronous durable backup.
+- *Solution B: Micro-checkpointing (Gradient Checkpointing)*: Trades compute for memory, but also used for state resilience.
+- *Comparative Analysis*: Frequent checkpointing ensures minimal lost work but increases I/O overhead. Gradient checkpointing reduces memory usage during training but increases compute time. Both are often used together.
 
-# Day 172: Day 172: AI Infra System Design Topic 172
+**5) Trade-off Analysis**
+- **Resilience vs. I/O Overhead**: More frequent checkpointing reduces potential lost work but increases storage I/O and can slow down training steps.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**6) How to Determine the Optimal Solution**
+- For spot instance training, use frequent checkpointing to local SSD with async upload to object storage. Combine with distributed training frameworks that support seamless checkpoint resume.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Spot Instances**: Unused cloud compute capacity available at a significant discount, but which can be reclaimed by the cloud provider with short notice.
+- **Checkpointing**: The process of saving the state of a training job (weights, optimizer state) to storage so it can be resumed later.
+- **SSD**: Solid State Drive – a type of persistent storage that uses flash memory, offering faster I/O than HDDs.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+---
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+================================================================================
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+### Day 173: Model Compression: Quantization, Pruning, and Knowledge Distillation
 
+**1) Topic and Core Examination Areas**
+- Topic: Model Compression: Quantization, Pruning, and Knowledge Distillation.
+- Core Examination Areas: Reducing model size and inference cost while maintaining accuracy.
 
----
+**2) Requirement Clarification and Metric Definitions**
+- **Size Reduction Target**: Reduce model size by 75% with < 2% accuracy drop.
+- **Latency Improvement**: Reduce inference latency (TP99) by 30% through compression.
+- **HBM Memory**: Reduce HBM usage per model from 80GB to 20GB to fit more models or larger batch sizes on a single GPU.
 
-# Day 173: Day 173: AI Infra System Design Topic 173
+**3) Core Architecture/Technical Component Design**
+- **Compression Pipeline**: Tools like NVIDIA TensorRT, Hugging Face Optimum, or AutoAWQ for quantization and pruning.
+- **Dynamic Quantization Engine**: Converts model weights to lower precision (e.g., FP16 to INT8) at serving time or pre-deployment.
+- **Distillation Server**: Larger "teacher" model generates soft labels to train a smaller "student" model.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Quantization (INT8, INT4)*: Reduces precision of weights and activations.
+- *Solution B: Pruning*: Removes less important weights or neurons from the model.
+- *Solution C: Knowledge Distillation*: Trains a smaller model to mimic the outputs of a larger model.
+- *Comparative Analysis*: Quantization offers the best speed/size trade-off with minimal accuracy loss. Pruning can be complex to retrain. Distillation produces a fundamentally smaller model but requires additional training data and compute for the student model.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**5) Trade-off Analysis**
+- **Accuracy vs. Efficiency**: Aggressive quantization (e.g., INT4) or heavy pruning can degrade model quality, especially for complex reasoning tasks. Distillation preserves more accuracy but requires significant teacher model compute.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**6) How to Determine the Optimal Solution**
+- Start with INT8 quantization, which is well-supported and offers significant size/latency reductions with minimal accuracy loss. If further compression is needed, explore INT4 or knowledge distillation for specific use cases.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Quantization**: The process of mapping continuous values to a finite set of discrete values, e.g., converting 32-bit floating point (FP32) weights to 8-bit integers (INT8).
+- **Pruning**: A technique where parts of a neural network (like weights or neurons) that contribute little to the output are removed.
+- **Knowledge Distillation**: A model compression technique where a smaller "student" model is trained to replicate the behavior of a larger "teacher" model.
+- **FP32**: 32-bit Floating Point – standard precision for neural network computations.
+- **INT8**: 8-bit Integer – a lower precision format used to reduce model size and inference latency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+---
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
 
+================================================================================
 
----
+### Day 174: Efficient Inference: KV Cache Optimization and PagedAttention
 
-# Day 174: Day 174: AI Infra System Design Topic 174
+**1) Topic and Core Examination Areas**
+- Topic: Efficient Inference: KV Cache Optimization and PagedAttention.
+- Core Examination Areas: Managing memory during LLM inference, optimizing token generation throughput, and reducing memory fragmentation.
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput (TPS)**: Increase token generation throughput by 50% through KV cache optimization.
+- **Memory Size (HBM)**: Optimize 80GB HBM usage to support larger batch sizes without OOM (Out of Memory) errors.
+- **QPS**: 15,000 QPS with sustained TP99 latency < 2 seconds.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**3) Core Architecture/Technical Component Design**
+- **KV Cache Manager**: Component that stores Key and Value states for each token in the context.
+- **PagedAttention Implementation**: Inspired by virtual memory paging, divides KV cache into blocks and manages them dynamically.
+- **Continuous Batching Engine**: Allows new requests to be batched with ongoing generations, maximizing GPU utilization.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Static Batching*: Groups requests at the start and processes them to completion together.
+- *Solution B: Continuous Batching (In-flight Batching)*: Dynamically adds new requests and removes completed ones within the batch.
+- *Solution C: PagedAttention*: Manages KV cache memory using paginated blocks, eliminating fragmentation.
+- *Comparative Analysis*: Static batching is simple but wastes compute on completed sequences. Continuous batching maximizes throughput but is complex to implement. PagedAttention solves the memory fragmentation issue that limits continuous batching efficiency.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**5) Trade-off Analysis**
+- **Complexity vs. Throughput**: Continuous batching with PagedAttention offers the highest throughput and memory efficiency but requires a specialized inference engine (e.g., vLLM). Static batching is easier to implement but leaves significant performance on the table.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**6) How to Determine the Optimal Solution**
+- For production LLM inference services targeting high QPS and TPS, use an inference engine that supports Continuous Batching and PagedAttention (like vLLM or TensorRT-LLM).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **KV Cache**: Key-Value Cache – the cache of past keys and values in the attention mechanism of an LLM, used to avoid recomputing previous tokens.
+- **PagedAttention**: An attention algorithm inspired by virtual memory paging in operating systems, used to efficiently manage KV cache memory.
+- **Static Batching**: A batching strategy where a fixed batch of requests is processed together from start to finish.
+- **Continuous Batching**: Also known as in-flight batching, a strategy that dynamically adds new requests and removes finished ones to maximize GPU utilization.
+- **OOM**: Out of Memory – an error occurring when a program attempts to allocate more memory than is available.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+---
 
 
----
 
-# Day 175: Day 175: AI Infra System Design Topic 175
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 175: Storage Cost Optimization for Large-Scale Datasets and Checkpoints
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Storage Cost Optimization for Large-Scale Datasets and Checkpoints.
+- Core Examination Areas: Tiered storage strategies, checkpoint compression, and lifecycle management for training data and model weights.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Storage Cost Reduction Target**: 40% reduction in storage costs for training datasets and checkpoints.
+- **Access Latency**: Hot checkpoints (last 5 versions) must be accessible in < 1 second. Cold checkpoints (older than 30 days) can have retrieval latency of < 5 minutes.
+- **Dataset Size**: 50TB of training data and 5TB of model checkpoints.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Tiered Storage Architecture**: Hot data on high-performance storage (NVMe, GP3), warm data on standard object storage, cold data on archive storage (e.g., S3 Glacier).
+- **Checkpoint Compression**: Store checkpoints in compressed formats (e.g., safetensors with compression, or tar.gz) to reduce storage footprint.
+- **Lifecycle Policies**: Automated rules to move data between tiers based on age or access frequency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Object Storage Lifecycle Management*: Native cloud features to transition data between storage classes.
+- *Solution B: Deduplication and Compression at Checkpoint Save Time*: Reduce the size of saved model weights before writing to storage.
+- *Comparative Analysis*: Lifecycle management is easy to configure and maintains data accessibility. Checkpoint compression reduces storage costs immediately but adds CPU overhead during save and load operations.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Compute Overhead vs. Storage Savings**: Compression saves storage costs but increases CPU usage and latency during checkpoint save/load. Lifecycle management has minimal compute overhead but requires careful tiering policies to avoid access latency issues.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- Use a combination: apply compression to checkpoints to reduce initial storage size, and use object storage lifecycle policies to automatically move older checkpoints to archive tiers. Keep the latest 3-5 checkpoints on fast storage for rapid resume.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **NVMe**: Non-Volatile Memory express – a high-speed standard for accessing solid-state drives.
+- **S3 Glacier**: Amazon S3 Glacier – an object storage service designed for long-term data archiving and backup with lower costs but longer retrieval times.
+- **safetensors**: A simple, safe way to store tensors, designed to avoid arbitrary code execution risks associated with other formats like pickle.
 
 ---
 
-# Day 176: Day 176: AI Infra System Design Topic 176
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 176: Serverless AI Inference and Auto-Scaling Architectures
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Serverless AI Inference and Auto-Scaling Architectures.
+- Core Examination Areas: Scaling inference workloads dynamically, cold start latency, and cost efficiency for variable traffic.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Scaling Metric**: Auto-scale from 0 to 100 GPU nodes based on QPS demand.
+- **Cold Start Latency**: Inference cold start (model loading into GPU memory) must complete in < 30 seconds.
+- **QPS Variability**: Traffic varies from 100 QPS (off-peak) to 10,000 QPS (peak).
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Serverless Inference Platform**: Services like AWS SageMaker Serverless Inference, or open-source KFServing/Knative with GPU support.
+- **Model Warm Pool**: Keep a minimal set of models loaded in GPU memory to reduce cold start times for frequent endpoints.
+- **Event-Driven Scaling**: Trigger scaling based on queue length or custom metrics (e.g., pending inference requests).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Container-Based Serverless (e.g., Knative)*: Scales pods based on traffic, but GPU pod startup can be slow.
+- *Solution B: Managed Serverless Inference (e.g., vLLM Serverless, Modal)*: Specialized platforms optimized for LLM inference with faster cold starts.
+- *Comparative Analysis*: Container-based serverless is flexible and uses standard Kubernetes but struggles with GPU cold starts. Managed serverless inference platforms are optimized for LLMs and offer faster scaling but may have less customization and higher per-unit costs.
 
+**5) Trade-off Analysis**
+- **Customization vs. Speed to Scale**: Kubernetes-based serverless offers full control but slow GPU cold starts. Managed serverless AI platforms offer faster scaling and optimized engines but may limit model serving customizations.
 
+**6) How to Determine the Optimal Solution**
+- For bursty, unpredictable LLM traffic where cold start latency under 30 seconds is acceptable, use managed serverless inference platforms. For workloads requiring custom inference engines or specific model architectures, use Kubernetes with pre-warmed GPU node pools.
+
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Serverless Inference**: An inference deployment model where the infrastructure provisioning and scaling are managed by the cloud provider or platform, charging only for actual inference compute used.
+- **Cold Start**: The latency incurred when a new instance of a service or model is initialized and loaded into memory.
+- **Knative**: An open-source project that builds components on Kubernetes to provide declarative deployments for serverless workloads.
+
 ---
+
+
 
-# Day 177: Day 177: AI Infra System Design Topic 177
+================================================================================
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+### Day 177: Model Serving: Static Batching vs Continuous Batching vs Speculative Decoding
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**1) Topic and Core Examination Areas**
+- Topic: Model Serving: Static Batching vs Continuous Batching vs Speculative Decoding.
+- Core Examination Areas: Techniques for maximizing LLM inference throughput and reducing latency.
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**2) Requirement Clarification and Metric Definitions**
+- **Throughput (TPS)**: Target 10,000 tokens per second throughput.
+- **Latency Metrics**: TTFT < 200ms; TP99 < 2 seconds.
+- **Speedup Target**: Speculative decoding should achieve a 2x speedup in token generation for repetitive text patterns.
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**3) Core Architecture/Technical Component Design**
+- **Batching Engine**: Manages the grouping of incoming requests for parallel processing.
+- **Speculative Decoding Component**: Uses a smaller "draft" model to propose tokens, which are then verified by the larger "target" model.
+- **Continuous Batching Scheduler**: Dynamically manages the lifecycle of requests within the batch.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Static Batching*: Fixed batches processed to completion.
+- *Solution B: Continuous Batching*: Dynamic addition and removal of requests in the batch.
+- *Solution C: Speculative Decoding*: A technique where a smaller model generates candidate tokens that are verified in parallel by the larger model.
+- *Comparative Analysis*: Static batching is inefficient for variable-length responses. Continuous batching maximizes GPU utilization. Speculative decoding reduces latency for specific workloads but requires a compatible draft model and adds architecture complexity.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**5) Trade-off Analysis**
+- **Throughput vs. Latency vs. Complexity**: Continuous batching maximizes throughput. Speculative decoding reduces latency but requires maintaining a draft model and may not benefit all prompt types. Static batching is simple but underutilizes hardware.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**6) How to Determine the Optimal Solution**
+- Use Continuous Batching as the baseline for all LLM serving. Add Speculative Decoding for use cases where the workload has repetitive patterns or where a high-quality draft model (e.g., a quantized smaller LLM) is available.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Speculative Decoding**: An inference acceleration technique where a smaller, faster model generates candidate tokens that are verified by the larger target model, reducing the number of sequential generation steps.
+- **Draft Model**: The smaller model used in speculative decoding to propose token sequences.
+- **Target Model**: The larger, more accurate model that verifies and finalizes the tokens proposed by the draft model.
 
 ---
 
-# Day 178: Day 178: AI Infra System Design Topic 178
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 178: Future Trend: Agentic AI Infrastructure and Multi-Agent Orchestration
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Future Trend: Agentic AI Infrastructure and Multi-Agent Orchestration.
+- Core Examination Areas: Infrastructure to support autonomous agents, tool use, memory management, and agent-to-agent communication.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Concurrent Agents**: Support 1,000 active agent sessions simultaneously.
+- **Tool Call Latency**: API/tool execution by agents must complete in < 500ms for internal tools, < 2 seconds for external APIs.
+- **Memory Storage**: Agent memory (conversations, tool outputs) must be stored with < 100ms retrieval latency.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Agent Orchestration Engine**: Framework (e.g., LangGraph, AutoGen) to manage agent state, tool routing, and multi-agent workflows.
+- **Tool Server Ecosystem**: Secure, API-gated services that agents can call (databases, search, code execution).
+- **Vector Memory Store**: Persistent storage for agent memories and knowledge bases, with semantic search capabilities.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: State Machine-Based Orchestration*: Explicitly define agent workflows and transitions.
+- *Solution B: LLM-Driven Dynamic Routing*: Use the LLM to decide which tool or sub-agent to call next.
+- *Comparative Analysis*: State machines are deterministic and easier to debug but less flexible. LLM-driven routing is flexible and handles novel situations but can be unpredictable and harder to audit.
 
+**5) Trade-off Analysis**
+- **Predictability vs. Flexibility**: State-based orchestration offers control and auditability but struggles with novel tasks. LLM-driven orchestration is highly flexible but introduces non-determinism and potential for infinite loops or tool misuse.
 
+**6) How to Determine the Optimal Solution**
+- Use a hybrid approach: define core workflows using state machines or directed graphs, and use LLM-driven routing for sub-tasks within those workflows. Implement strict tool use policies and timeouts to prevent infinite loops.
+
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Agentic AI**: AI systems that can autonomously pursue goals by using tools, planning, and memory, rather than just responding to prompts.
+- **Vector Memory Store**: A database optimized for storing and retrieving data as vector embeddings, enabling semantic search and long-term memory for AI agents.
+
 ---
 
-# Day 179: Day 179: AI Infra System Design Topic 179
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 179: Future Trend: Edge AI and Distributed Inference Networks
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Future Trend: Edge AI and Distributed Inference Networks.
+- Core Examination Areas: Deploying AI models to edge devices, reducing latency and bandwidth costs, and handling intermittent connectivity.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Edge Devices**: 10,000 edge nodes (e.g., IoT devices, edge servers) deploying inference models.
+- **Latency Target**: Inference latency at the edge must be < 50ms for real-time applications (e.g., vision, speech).
+- **Bandwidth Reduction**: Reduce cloud-bound data traffic by 80% by performing inference at the edge.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Model Compression for Edge**: Quantized and pruned models optimized for low-power CPUs or NPUs (Neural Processing Units).
+- **Edge Inference Runtime**: Lightweight serving software (e.g., ONNX Runtime, MediaPipe) deployed on edge devices.
+- **Fleet Management System**: Over-the-air (OTA) updates for model versions and runtime configurations.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Cloud-Centric Inference with Edge Filtering*: Edge devices collect data and send only filtered or aggregated results to the cloud.
+- *Solution B: Fully Distributed Edge Inference*: Models run entirely on edge devices, with only metadata or insights sent to the cloud.
+- *Comparative Analysis*: Cloud-centric inference uses powerful cloud models but incurs latency and bandwidth costs. Fully distributed edge inference reduces latency and bandwidth but requires model compression and edge device compute capabilities.
 
+**5) Trade-off Analysis**
+- **Model Quality vs. Edge Constraints**: High-accuracy LLMs or vision models may not fit on edge devices with limited HBM or CPU power. Compression trades some accuracy for edge deployability.
 
+**6) How to Determine the Optimal Solution**
+- For real-time, privacy-sensitive, or bandwidth-constrained applications, use fully distributed edge inference with compressed models. For complex reasoning or low-frequency tasks, use edge filtering with cloud-centric inference.
+
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **Edge AI**: The execution of AI algorithms on local devices (edge) rather than in a centralized cloud data center.
+- **NPU**: Neural Processing Unit – a specialized processor designed to accelerate machine learning and neural network workloads.
+- **ONNX Runtime**: An open-source inference engine that runs models exported in the Open Neural Network Exchange (ONNX) format.
+- **OTA**: Over-The-Air – method of transmitting new data or software to an electronic device wirelessly.
+
 ---
 
-# Day 180: Day 180: AI Infra System Design Topic 180
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+================================================================================
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+### Day 180: Future Trend: Quantum Machine Learning Infrastructure and Post-Quantum Cryptography
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**1) Topic and Core Examination Areas**
+- Topic: Future Trend: Quantum Machine Learning (QML) Infrastructure and Post-Quantum Cryptography (PQC).
+- Core Examination Areas: Preparing AI infrastructure for quantum computing advancements and securing models/data against quantum decryption threats.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**2) Requirement Clarification and Metric Definitions**
+- **Quantum Readiness**: Assess current infrastructure for compatibility with quantum-inspired algorithms or hybrid quantum-classical training.
+- **PQC Migration Timeline**: Begin planning migration to post-quantum cryptographic standards within 2 years, targeting full migration in 5-7 years.
+- **Hybrid Compute Metric**: Support for routing specific workloads (e.g., optimization problems) to quantum or quantum-simulator backends.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**3) Core Architecture/Technical Component Design**
+- **Quantum Cloud Access Layer**: APIs to access quantum processors (QPUs) or simulators from providers like IBM Quantum, AWS Braket, or Azure Quantum.
+- **Hybrid Training Pipeline**: Classical models for feature extraction, quantum circuits for specific optimization or classification tasks.
+- **Crypto-Agility Framework**: Infrastructure designed to swap cryptographic algorithms (e.g., from RSA/ECC to PQC algorithms like Kyber or Dilithium) without major architectural changes.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- *Solution A: Quantum-Inspired Classical Algorithms*: Use algorithms inspired by quantum mechanics (e.g., tensor networks) on classical hardware.
+- *Solution B: Hybrid Quantum-Classical ML*: Integrate actual QPUs for specific subroutines (e.g., variational quantum eigensolvers).
+- *Solution C: Post-Quantum Cryptography (PQC)*: Replace current public-key cryptography with lattice-based or hash-based schemes resistant to quantum attacks.
+- *Comparative Analysis*: Quantum-inspired algorithms offer immediate benefits on classical hardware. Hybrid QML is promising but limited by current QPU noise and availability. PQC is a necessity for long-term data security as quantum computers advance.
 
+**5) Trade-off Analysis**
+- **Near-Term Utility vs. Long-Term Security**: Quantum-inspired ML and hybrid pipelines offer research value but limited production utility today. PQC migration requires upfront effort and potential performance trade-offs (larger key sizes) but is essential for future-proofing data security.
 
----
+**6) How to Determine the Optimal Solution**
+- For AI infrastructure today, focus on quantum-inspired algorithms for optimization tasks and begin crypto-agility planning for PQC. Do not rely on current QPUs for production workloads, but maintain access to quantum cloud simulators for R&D.
 
+**7) Full Names and Explanations of Nouns and Abbreviations**
+- **QML**: Quantum Machine Learning – the integration of quantum computing and machine learning.
+- **PQC**: Post-Quantum Cryptography – cryptographic algorithms that are believed to be secure against an attack by a quantum computer.
+- **QPU**: Quantum Processing Unit – the quantum analog of a classical processing unit, used to perform quantum computations.
+- **Crypto-Agility**: The ability of a system to quickly adapt to new cryptographic algorithms or key sizes without significant architectural changes.
+- **Kyber and Dilithium**: NIST-selected post-quantum cryptographic algorithms (Kyber for key encapsulation, Dilithium for digital signatures).
