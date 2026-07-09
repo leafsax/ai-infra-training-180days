@@ -1,38 +1,35 @@
-# 第66天：第66天：AI Infra系统设计训练题
+### Day 66: 数据版本控制与血缘追踪 (Data Versioning and Lineage Tracking)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**：
+设计数据版本控制与血缘追踪系统，确保 LLM 训练数据可复现、可追溯。考察数据湖格式、版本控制工具与元数据管理。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**：
+- 数据版本：需支持至少 100 个主要数据版本迭代。
+- 血缘追踪：需追溯每个训练模型到具体的数据版本与处理管道版本。
+- 查询性能：元数据查询延迟 < 100 ms。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**：
+- 数据湖格式：使用 Delta Lake, Apache Iceberg 或 Apache Hudi，支持 ACID 事务与时间旅行（Time Travel）。
+- 版本控制工具：使用 DVC (Data Version Control) 或 LakeFS 管理数据版本。
+- 元数据与血缘：使用 Apache Atlas 或 MLflow 记录数据血缘（Data Lineage）。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**：
+- Delta Lake vs Iceberg vs Hudi：
+  - Delta Lake：Databricks 主导，与 Spark 深度集成，支持 ACID。
+  - Apache Iceberg：Apache 开源，表格式标准，支持多引擎（Spark, Trino, Flink）。
+  - Hudi：Apache 开源，擅长实时增量更新（Upsert）。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**：
+- Delta Lake 生态封闭但易用；Iceberg 开放标准但配置复杂；Hudi 实时能力强但批处理性能略弱。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**：
+对于 LLM 训练数据，强调批处理与时间旅行回溯，Delta Lake 或 Iceberg 均为优解；若需实时数据流入与增量更新，Hudi 更合适。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写全称及解释**：
+- **ACID**：Atomicity（原子性）、Consistency（一致性）、Isolation（隔离性）、Durability（持久性），数据库事务特性。
+- **Time Travel**：数据湖支持查询历史版本数据的能力。
+- **DVC (Data Version Control)**：用于版本控制数据和机器学习模型的开源工具。
+- **Data Lineage**：数据血缘，追踪数据从源到目标的流转过程。
+
+---
+

@@ -1,38 +1,30 @@
-# 第70天：第70天：AI Infra系统设计训练题
+### Day 70: 数据管道监控与质量保证 (Data Pipeline Monitoring and Quality Assurance)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**：
+设计数据管道监控与质量评估系统，检测数据漂移（Data Drift）、质量下降与管道故障。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**：
+- 监控延迟：指标计算与告警延迟 < 1 分钟。
+- 数据漂移检测：检测分布变化（KL 散度 > 阈值）并触发告警。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**：
+- 指标收集：使用 Prometheus + Grafana 监控管道吞吐量、延迟、错误率。
+- 数据质量检查：使用 Great Expectations 或 Deequ 定义数据质量规则。
+- 漂移检测：使用 Evidently AI 或自定义统计测试检测特征分布变化。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**：
+- 统计漂移检测 vs 模型驱动检测：统计方法（如 KS 测试）计算快但仅限数值特征；模型驱动（如使用分类器区分训练/生产数据）更通用但成本高。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**：
+- 实时监控 vs 离线分析：实时监控响应快但资源消耗大；离线分析成本低但延迟高。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**：
+采用分层监控：基础指标（吞吐量、错误率）实时 Prometheus 监控；数据质量与漂移使用每日离线 Great Expectations 检查。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写全称及解释**：
+- **Data Drift**：数据漂移，指生产数据分布与训练数据分布发生变化。
+- **KL Divergence (Kullback-Leibler Divergence)**：KL 散度，衡量两个概率分布差异的统计量。
+- **Great Expectations**：开源数据质量验证工具。
+
+---
+

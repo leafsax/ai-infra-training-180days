@@ -1,38 +1,39 @@
-# Day 76: Day 76: AI Infra System Design Topic 76
+### **Day 76: Auto-Scaling Fundamentals for AI Serving Systems**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Auto-scaling concepts and triggers (CPU, GPU, memory, custom metrics)
+- Scaling up vs scaling out
+- Scaling AI model serving workloads
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Current inference QPS: 2,000 QPS, peaking at 10,000 QPS
+- GPU utilization target: 60-80% for cost-effective scaling
+- Scaling trigger: Scale up when GPU utilization > 75% for 5 minutes
+- Scale-in cooldown: 10 minutes to prevent flapping
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Metrics Collection: Prometheus, GPU metrics (nvml, DCGM)
+- Auto-Scaler: Kubernetes HPA (Horizontal Pod Autoscaler), custom scalers for GPU metrics
+- Model Serving: vLLM, TensorRT-LLM, or KServe
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **CPU-based HPA vs GPU-based HPA**: CPU metrics are standard but may not reflect AI workload pressure (a model can be GPU-bound while CPU is idle). GPU-based scaling (using DCGM or custom metrics) is more accurate for LLM serving.
+- **Scaling Pods vs Scaling Nodes**: Scaling pods (horizontal scaling of model instances) is faster but limited by available nodes. Scaling nodes (adding GPU nodes) takes longer (provisioning time) but increases capacity.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Pod scaling: Fast, but may hit node capacity limits or cause resource fragmentation.
+- Node scaling: Increases capacity but has provisioning latency (minutes for GPU nodes), risking request spikes during scale-up.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use pod-level auto-scaling (HPA) for rapid response to QPS changes within existing node capacity.
+- Use node-level auto-scaling (Cluster Autoscaler / Karpenter) to handle sustained high load or new model deployments.
+- Combine both: HPA for pod scaling, triggered by GPU utilization or queue length.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **HPA**: Horizontal Pod Autoscaler. A Kubernetes component that automatically scales the number of pod replicas.
+- **GPU**: Graphics Processing Unit. Originally for graphics, now widely used for AI/ML compute.
+- **DCGM**: Data Center GPU Manager. NVIDIA's tool for monitoring and managing GPU metrics.
+- **nvml**: NVIDIA Management Library. API for monitoring and managing NVIDIA GPUs.
+
+---
+

@@ -1,38 +1,41 @@
-# Day 67: Day 67: AI Infra System Design Topic 67
+### **Day 67: Document Chunking Strategies and Embedding Models**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Document parsing and chunking strategies (fixed-size, semantic, recursive)
+- Embedding models selection and optimization
+- Chunk metadata and overlap
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Document types: PDFs, Markdown, HTML, Word docs
+- Chunk size: 500-1,000 tokens per chunk
+- Chunk overlap: 10-20% of chunk size
+- Embedding model dimension: 768 or 1024 dimensions
+- Embedding API cost: ~$0.1 per 1M tokens
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Parsing Layer: pdfplumber, PyPDF, BeautifulSoup, or LlamaParse
+- Chunking Layer: RecursiveCharacterTextSplitter, SemanticChunker
+- Embedding Layer: OpenAI text-embedding-3-small, Cohere embed-english-v3, or open-source models (e.g., BGE-m3)
+- Metadata Injection: Document source, section headers, timestamps
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Fixed-size vs Semantic Chunking**: Fixed-size (e.g., RecursiveCharacterTextSplitter) splits by delimiters (newlines, periods) and is fast but may break semantic context. Semantic chunking uses embeddings or NLP to split at logical boundaries, preserving context but requiring more compute.
+- **Embedding Models**: OpenAI/Cohere models offer high accuracy and ease of use but are SaaS and cost per token. Open-source models (BGE, Sentence-Transformers) can be self-hosted, offering cost control at scale but requiring inference infrastructure.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Fixed-size chunking: Fast, simple, but may cut sentences or lose context.
+- Semantic chunking: Preserves meaning, better retrieval quality, but slower and more complex to implement.
+- SaaS vs Self-hosted embeddings: SaaS is easy and accurate but scales costly; self-hosted is cost-effective at high volume but requires GPU/CPU infrastructure and maintenance.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For general documents with mixed formats, use RecursiveCharacterTextSplitter with 500-1000 token size and 10-20% overlap.
+- For complex documents (reports, papers) where context is critical, use semantic chunking or LLM-based chunking.
+- For low budget and high volume, self-host open-source embeddings (BGE-m3); for highest accuracy and simplest ops, use SaaS embeddings (OpenAI, Cohere).
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **Token**: A piece of text (word, subword, or character) that an LLM processes.
+- **Embedding**: A dense vector representation of text that captures semantic meaning.
+- **BGE-m3**: BAAI General Embedding - multilingual, multi-functionality. An open-source embedding model.
+
+---
+

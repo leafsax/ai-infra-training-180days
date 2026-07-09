@@ -1,38 +1,36 @@
-# Day 89: Day 89: AI Infra System Design Topic 89
+### **Day 89: Edge AI Auto-Scaling and Distributed Inference**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Edge AI inference and deployment
+- Distributed inference across edge and cloud
+- Edge auto-scaling and device management
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Edge devices: 10,000 IoT devices or edge GPUs
+- Inference latency target at edge: < 100 ms
+- Cloud offload threshold: When edge GPU utilization > 90%
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Edge Inference: ONNX Runtime, TensorRT, or llama.cpp on edge GPUs/CPU
+- Cloud Offload: Route complex queries or high-load periods to cloud LLM serving
+- Device Management: Kubernetes KubeEdge or AWS IoT Greengrass
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Edge vs Cloud Inference**: Edge inference reduces latency and bandwidth cost, but edge devices have limited compute. Cloud inference offers powerful models but adds network latency.
+- **Distributed Inference**: Splitting the inference workload or model layers across edge and cloud (e.g., embedding at edge, generation in cloud).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Edge inference: Low latency, privacy, offline capability, but limited model size and compute.
+- Cloud offload: Powerful models, but network latency and cost.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For simple, latency-sensitive tasks (e.g., local embedding, filtering), use edge inference.
+- For complex generation or RAG, offload to cloud serving when edge capacity is exceeded or task complexity is high.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **Edge AI**: AI inference performed on local devices (edge) rather than in centralized cloud data centers.
+- **ONNX Runtime**: Open Neural Network Exchange Runtime. A cross-platform inference accelerator.
+- **KubeEdge**: An open-source system for extending native containerized application orchestration to edge devices.
+
+---
+

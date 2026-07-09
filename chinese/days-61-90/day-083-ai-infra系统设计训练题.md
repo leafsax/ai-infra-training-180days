@@ -1,38 +1,28 @@
-# 第83天：第83天：AI Infra系统设计训练题
+### Day 83: AI 服务自动扩缩容基础 (Auto-Scaling Fundamentals for AI Services)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**：
+设计 AI 推理服务的自动扩缩容系统，考察指标驱动扩缩容与 K8s HPA。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**：
+- 扩缩容指标：GPU 利用率 > 70% 触发扩容，< 30% 触发缩容。
+- 扩缩容延迟：< 2 分钟。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**：
+- 监控：Prometheus 收集 GPU 指标。
+- 扩缩容控制器：K8s HPA (Horizontal Pod Autoscaler) 或 KEDA。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**：
+- 基于请求数扩缩容 vs 基于 GPU 利用率扩缩容。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**：
+- 请求数扩缩容响应快但可能忽略资源瓶颈；GPU 利用率更准确但延迟高。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**：
+采用混合指标：QPS + GPU 利用率 + 队列长度。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写全称及解释**：
+- **HPA (Horizontal Pod Autoscaler)**：Kubernetes 水平 Pod 自动扩缩容器。
+- **KEDA (Kubernetes Event-Driven Autoscaling)**：基于事件的 K8s 扩缩容工具。
+
+---
+

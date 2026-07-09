@@ -1,38 +1,43 @@
-# Day 66: Day 66: AI Infra System Design Topic 66
+### **Day 66: RAG Architecture Overview and Core Components**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- RAG (Retrieval-Augmented Generation) system architecture
+- Core components: indexer, retriever, generator, evaluator
+- End-to-end RAG pipeline design
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Document corpus size: 1 million documents, total 500 GB
+- Embedding model throughput: 1,000 documents/second for indexing
+- Retrieval QPS: 5,000 QPS for user queries
+- Retrieval latency: P99 < 100 ms
+- Generation latency: TTFT (Time to First Token) < 500 ms, TP99 generation latency < 3 seconds
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Ingestion/Indexing: Document parsing, chunking, embedding generation, vector storage
+- Retrieval: Vector search engine, keyword search, reranking
+- Generation: LLM inference service (vLLM, TensorRT-LLM)
+- Orchestration: LangChain, LlamaIndex, or custom orchestrator
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Vector Databases vs In-Memory Search**: Vector DBs (Milvus, Pinecone, Qdrant) offer distributed scaling, persistence, and advanced indexing (HNSW). In-memory search (FAISS) is fast and free but requires manual scaling and persistence management.
+- **Orchestration Frameworks**: LangChain offers a comprehensive ecosystem with many integrations but can be complex; LlamaIndex is optimized for data indexing and RAG-specific workflows, often simpler for pure RAG use cases.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Vector DB vs FAISS: Vector DBs provide production-ready features (replication, backup, scaling) but incur cost and operational complexity; FAISS is lightweight and fast but requires custom infrastructure for production scaling.
+- LangChain vs LlamaIndex: LangChain is general-purpose agent framework; LlamaIndex is focused on data ingestion and RAG retrieval optimization.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For production RAG with distributed data and high QPS, choose a managed or self-hosted Vector DB (Pinecone, Milvus, Qdrant).
+- For pure RAG data indexing and retrieval optimization, choose LlamaIndex.
+- For complex agentic workflows beyond RAG, choose LangChain.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **RAG**: Retrieval-Augmented Generation. A technique that enhances LLM responses by retrieving relevant context from an external knowledge base.
+- **TTFT**: Time to First Token. The latency from sending a prompt to receiving the first token of the response.
+- **TP99**: 99th percentile latency. 99% of requests complete within this time.
+- **HNSW**: Hierarchical Navigable Small World. A graph-based algorithm for approximate nearest neighbor search.
+- **FAISS**: Facebook AI Similarity Search. A library for efficient similarity search and clustering of dense vectors.
+- **LLM**: Large Language Model.
+
+---
+

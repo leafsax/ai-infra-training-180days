@@ -1,38 +1,37 @@
-# Day 85: Day 85: AI Infra System Design Topic 85
+### **Day 85: Canary Deployments, A/B Testing, and Shadow Deployments for Models**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Model deployment strategies
+- A/B testing for LLMs and RAG systems
+- Shadow testing and traffic splitting
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Canary traffic percentage: Start with 5%, scale to 20%, then 100%
+- A/B test duration: 7 days minimum for statistical significance
+- Shadow traffic: 10% of production traffic routed to new model silently
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Traffic Splitting: Istio, Kong, or API gateway for percentage-based routing
+- A/B Framework: LangSmith, custom analytics, or feature flags
+- Shadow Mode: Duplicate requests to new model, log outputs, but not return to user
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Canary vs A/B vs Shadow**: Canary releases gradually roll out a new version to users. A/B testing compares two versions metric-wise. Shadow routing sends traffic to a new model without affecting user experience, used for validation.
+- **Feature Flags**: Enable or disable model features or versions without deploying new code.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Canary: Low risk, gradual rollout, but may take time to validate full performance.
+- Shadow: Safe validation, but does not measure real user impact since responses are not returned.
+- A/B Testing: Measures real impact, but requires statistical rigor and user segmentation.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For new model versions, start with shadow mode to validate outputs, then canary release with 5% traffic, and finally full rollout.
+- For comparing model A vs model B for business metrics, use A/B testing with feature flags.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **Canary Deployment**: Releasing a new version to a small subset of users before full rollout.
+- **Shadow Deployment**: Routing production traffic to a new system silently to test it without affecting users.
+- **Feature Flag**: A software development technique that allows features to be enabled or disabled without deploying new code.
+
+---
+

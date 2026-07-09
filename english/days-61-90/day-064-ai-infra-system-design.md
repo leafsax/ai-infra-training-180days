@@ -1,38 +1,41 @@
-# Day 64: Day 64: AI Infra System Design Topic 64
+### **Day 64: Stream Processing for AI Data (Kafka, Kinesis, Flink)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Stream processing architectures
+- Event-driven AI pipelines
+- Stateful stream processing and watermarking
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Event ingestion rate: 100,000 events/second
+- Stream processing latency: P99 < 1 second
+- Throughput: 50,000 TPS for feature update streams
+- Data retention: Kafka topics retain data for 7 days
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Event Broker: Apache Kafka or AWS Kinesis
+- Stream Processing Engine: Apache Flink or Spark Streaming
+- State Storage: RocksDB (embedded in Flink) or external KV stores
+- Sink: Feature store, data lake, or real-time model inference endpoint
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Kafka vs Kinesis**: Kafka is open-source, highly customizable, and runs on-prem or cloud; Kinesis is fully managed by AWS, easier to operate, but less flexible and vendor-locked.
+- **Flink vs Spark Streaming**: Flink is a native stream processing engine with true streaming (event-by-event) and low latency; Spark Streaming uses micro-batches (typically 1-5 seconds), which is simpler but has higher latency.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Kafka (self-managed) vs Kinesis (managed): Kafka requires operational overhead but offers control and cost predictability; Kinesis reduces ops but scales costs with volume.
+- Flink (stateful streaming) vs Spark (micro-batch): Flink provides exactly-once semantics and lower latency but has a steeper learning curve; Spark is easier to adopt for teams already using Spark for batch.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For real-time, low-latency AI features with complex state (e.g., user session aggregations), choose Kafka + Flink.
+- For AWS-native environments with managed services preference, choose Kinesis + Lambda or Kinesis Data Analytics.
+- For teams with existing Spark ecosystems and micro-batch is acceptable, choose Spark Streaming.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **Kafka**: Apache Kafka. A distributed event streaming platform for high-performance data pipelines.
+- **Kinesis**: Amazon Kinesis. A managed service for real-time data streaming on AWS.
+- **Flink**: Apache Flink. A distributed stream processing framework.
+- **Spark Streaming**: The streaming processing component of Apache Spark, using micro-batches.
+- **Watermarking**: A mechanism in stream processing to handle late-arriving events by defining a threshold of expected event time progression.
+
+---
+

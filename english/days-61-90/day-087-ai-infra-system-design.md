@@ -1,38 +1,38 @@
-# Day 87: Day 87: AI Infra System Design Topic 87
+### **Day 87: Metric-Driven Auto-Scaling for LLM Serving (TTFT, TPOT, P99 Latency, KV Cache utilization)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- LLM-specific metrics for auto-scaling
+- TTFT, TPOT (Time Per Output Token), P99 latency
+- KV Cache utilization and GPU memory scaling triggers
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- TTFT target: < 500 ms
+- TPOT target: < 50 ms/token
+- P99 latency target: < 3 seconds
+- KV Cache utilization threshold: 85% of HBM
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Custom Metrics: Export TTFT, TPOT, KV Cache usage from vLLM/TensorRT-LLM to Prometheus
+- Auto-Scaler: KEDA or custom HPA triggered by TTFT or KV Cache utilization
+- Scaling policy: Scale out when TTFT > 500 ms or KV Cache > 85%
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **TTFT vs TPOT Scaling**: TTFT is sensitive to request arrival and initial processing; TPOT is sensitive to batch size and GPU compute. Scaling based on TTFT prevents latency spikes; scaling based on TPOT ensures throughput.
+- **KV Cache Utilization**: As KV Cache grows, GPU memory fills up, causing eviction or slowdown. Monitoring KV Cache HBM usage is a leading indicator for scaling.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- TTFT-based scaling: Responsive to user experience, but may trigger scaling for transient spikes.
+- KV Cache-based scaling: Accurate indicator of GPU memory pressure, but requires custom metrics export.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use TTFT and P99 latency as primary scaling triggers for user-facing LLM serving.
+- Use KV Cache utilization as a secondary trigger to prevent OOM or eviction issues.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **TTFT**: Time to First Token.
+- **TPOT**: Time Per Output Token. The average time to generate each token after the first.
+- **KV Cache**: Key-Value Cache.
+- **HBM**: High Bandwidth Memory.
+
+---
+

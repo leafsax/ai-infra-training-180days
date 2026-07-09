@@ -1,38 +1,43 @@
-# Day 62: Day 62: AI Infra System Design Topic 62
+### **Day 62: Data Versioning, Lineage, and Datasets (DVC, MLflow)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Data versioning control (similar to Git for code)
+- Data lineage and traceability
+- Experiment tracking and dataset management
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Dataset size: 500 GB of training data, versioned weekly
+- Number of experiments: 200+ model training experiments per month
+- Lineage tracking: Must trace model predictions back to the exact dataset version and feature configuration
+- Storage metric: Versioned data storage cost ~$50/TB/month
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Versioning Layer: DVC (Data Version Control) for data, models, and metrics integration with Git
+- Experiment Tracking: MLflow or Weights & Biases (W&B)
+- Storage: S3 or GCS for data and model artifacts; Git for code and DVC metafiles
+- Lineage Tool: Apache Atlas or MLflow Projects
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **DVC vs Git LFS**: Git LFS stores large files directly in the Git repository, which can bloat the repo. DVC stores data in remote storage (S3/GCS) and keeps only metafiles (`.dvc`) in Git, enabling efficient versioning.
+- **MLflow vs W&B**: MLflow is open-source, modular (Tracking, Projects, Models, Registry), and self-hostable. W&B is a SaaS-first platform with rich visualization and collaboration features but can be costlier at scale.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- DVC: Lightweight, integrates with Git, but requires custom pipeline for complex lineage.
+- MLflow: Comprehensive experiment tracking and model registry, but can be complex to set up for full data lineage.
+- W&B: Excellent UX and real-time collaboration, but vendor lock-in and higher cost for large teams.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For open-source, self-hosted, and Git-integrated data versioning, choose DVC + S3.
+- For comprehensive experiment tracking and model registry with a team, choose MLflow.
+- For SaaS-first, rich visualization, and AI research teams, choose W&B.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **DVC**: Data Version Control. An open-source version control system for machine learning projects.
+- **Git LFS**: Git Large File Storage. An extension for Git to handle large files.
+- **MLflow**: An open-source platform to manage the ML lifecycle (experiment tracking, packaging, deployment).
+- **W&B**: Weights & Biases. A SaaS platform for experiment tracking, visualization, and collaboration.
+- **S3**: Amazon Simple Storage Service. Object storage service offered by AWS.
+- **GCS**: Google Cloud Storage. Object storage service offered by Google Cloud.
+
+---
+

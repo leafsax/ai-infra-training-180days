@@ -1,38 +1,38 @@
-# Day 72: Day 72: AI Infra System Design Topic 72
+### **Day 72: GraphRAG and Knowledge Graphs in RAG**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Knowledge Graph construction and integration
+- GraphRAG architecture
+- Entity and relationship extraction
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Graph size: 100,000 entities, 500,000 relationships
+- Graph construction latency: < 24 hours for 10 GB of documents
+- Graph search latency: P99 < 100 ms for entity traversal
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Extraction Layer: LLM-based entity and relation extraction, or NLP tools (spaCy, NLTK)
+- Graph Storage: Neo4j, NebulaGraph, or Amazon Neptune
+- GraphRAG Retrieval: Community summaries, entity-based search, hybrid graph-vector search
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Knowledge Graph vs Vector DB**: Vector DBs excel at semantic similarity over unstructured text. Knowledge Graphs excel at structured relationships, entity resolution, and multi-hop reasoning. GraphRAG combines both.
+- **Graph Construction Methods**: LLM-based extraction is accurate but expensive and slow; rule-based/NLP extraction is fast and cheap but less accurate for complex relationships.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- GraphRAG: Powerful for complex, multi-hop queries and global understanding, but graph construction is costly and maintenance is complex.
+- LLM-based vs NLP extraction: LLM-based yields richer semantics but higher cost and latency; NLP/rule-based is faster but may miss nuanced relationships.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For documents with rich entity relationships (e.g., medical, legal, corporate reports), consider GraphRAG.
+- For general document Q&A, standard vector-based RAG is sufficient and more cost-effective.
+- Use LLM-based extraction for high-value, low-volume knowledge graphs; use NLP/rule-based for large-scale, lower-accuracy needs.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **GraphRAG**: Graph-based Retrieval-Augmented Generation. A RAG approach that uses knowledge graphs to improve retrieval and reasoning.
+- **Knowledge Graph**: A graph database that stores entities, attributes, and relationships in a structured format.
+- **Neo4j**: A popular graph database management system.
+- **Multi-hop reasoning**: Reasoning that requires traversing multiple relationships or steps to arrive at an answer.
+
+---
+

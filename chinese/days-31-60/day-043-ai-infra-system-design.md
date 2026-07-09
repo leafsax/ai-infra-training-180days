@@ -1,0 +1,28 @@
+### Day 43: 推理缓存策略：Prompt Caching与KV Cache Caching
+
+**1) 题目与考察核心**
+设计高效的推理缓存系统。考察核心：Prompt Caching与KV Cache重用的机制。
+
+**2) 需求澄清与指标定义**
+- **QPS**：3000。
+- **延迟指标**：TTFT降低30%通过缓存机制。
+- **上下文特征**：大量请求包含相同系统提示（System Prompt）或长文档。
+
+**3) 核心架构/技术组件设计**
+- 缓存层：Prompt Cache（存储常见system prompt或RAG文档）与KV Cache Cache（跨请求的KV块重用）。
+
+**4) 关键技术深入与可能解**
+- **Prompt Caching**：将重复的prompt部分缓存，避免每次重新计算embedding与前置层。
+- **KV Cache Caching / Prefix Caching**：如vLLM的Prefix Caching，相同前缀的KV Blocks可在不同请求间共享。
+
+**5) Trade-off（权衡）分析**
+- 缓存提升TTFT与吞吐，但占用额外CPU/GPU显存，且需处理缓存失效（Cache Eviction）策略。
+
+**6) 如何确定最优解**
+启用Prefix Caching与Prompt Caching，结合LRU（Least Recently Used）缓存淘汰策略，平衡显存占用与命中率。
+
+**7) 名词和缩写全称及解释**
+- **Prefix Caching**：缓存请求的公共前缀部分（如system prompt），供后续请求重用。
+- **LRU (Least Recently Used)**：最近最少使用缓存淘汰算法。
+
+---

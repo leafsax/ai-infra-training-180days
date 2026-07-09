@@ -1,42 +1,44 @@
-# Day 61: Day 61: AI Infra System Design Topic 61
+### **Day 61: Data Ingestion and ETL/ELT Pipelines for ML Models**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a high-throughput, low-latency general Large Language Model (LLM) inference service system that supports multi-tenant concurrent requests.
-**Core Examination Areas**: Inference service architecture, request scheduling mechanism, batching technology (Batching), optimization of prefill (Prefill) and decode (Decode) phases.
+**1) Topic and Core Examination Areas**
+- Data ingestion patterns (batch vs streaming)
+- ETL (Extract, Transform, Load) vs ELT (Extract, Load, Transform) pipelines
+- Data pipeline orchestration and reliability
 
-## 2) Requirement Clarification and Metric Definitions
-- **qps**: 1000
-- **ttft_tp99**: 200ms
-- **inter_token_latency_tp99**: 50ms/token
-- **tps**: 5000
-- **hbm_size**: 80GB HBM
-- **context_length**: 32K
+**2) Requirement Clarification and Metric Definitions**
+- Data ingestion volume: 10 TB/day of structured and unstructured data
+- QPS (Queries Per Second) of ingestion endpoints: ~10,000 QPS for real-time event streams
+- Throughput (TPS - Transactions Per Second): 5,000 TPS for batch ETL jobs
+- Latency metrics: Batch ETL SLA: T+1 day (24 hours); Stream processing latency: P99 < 2 seconds
+- Storage capacity: Data Lake (e.g., AWS S3) requires 100 TB initial, growing at 1 TB/week
 
-## 3) Core Architecture/Technical Component Design
-- API Gateway & Request Queue
-- Scheduler
-- Inference Engine (vLLM, TGI)
-- Model Weight Storage
+**3) Core Architecture/Technical Component Design**
+- Data Sources: APIs, databases (PostgreSQL, MongoDB), event logs
+- Ingestion Layer: Apache Kafka or AWS Kinesis for stream data; AWS DMS or Fivetran for database sync
+- Processing Layer: Apache Spark (batch), Apache Flink (stream)
+- Storage Layer: Data Lake (S3, Parquet format), Data Warehouse (Snowflake, BigQuery)
+- Orchestration: Apache Airflow or Prefect
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **Static Batching**
-- **Continuous Batching/In-flight Batching**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Batch ETL vs Stream ETL**: Batch ETL processes data in large chunks at scheduled intervals (e.g., nightly). Stream ETL processes data continuously as it arrives.
+- **ETL vs ELT**: ETL transforms data before loading into the target warehouse; ELT loads raw data first, then transforms inside the warehouse using its compute power.
+- **Orchestration Tools**: Apache Airflow uses DAGs (Directed Acyclic Graphs) and is Python-centric; Prefect offers modern workflow orchestration with better error handling and dynamic task generation.
 
-## 5) Trade-off Analysis
-- Batch Size增大 vs TTFT和Decode延迟
-- Static vs Continuous Batching
+**5) Trade-off analysis**
+- ETL vs ELT: ETL requires more compute in the transformation layer and is better for strict data governance before storage; ELT leverages modern DW compute, is faster to implement, but raw data is stored first.
+- Batch vs Stream: Batch is cost-effective, easier to debug, and guarantees exactly-once processing; Stream provides low latency but is complex to manage (state management, watermarking).
 
-## 6) How to Determine the Optimal Solution
-Continuous Batching + dynamic KV Cache management
+**6) How to determine the optimal solution**
+- If business requires real-time dashboards or real-time ML features (e.g., fraud detection), choose Stream ETL + Kafka + Flink.
+- If business is analytics-focused with T+1 requirements, choose ELT + Spark + Airflow + Data Warehouse.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **LLM**: Large Language Model, large language model
-- **QPS**: Queries Per Second
-- **TTFT**: Time To First Token
-- **TP99**: 99% of request latencies are less than this value
-- **TPS**: Tokens Per Second
-- **HBM**: High Bandwidth Memory
-- **Static Batching**: Static batching
-- **Continuous Batching**: Continuous batching
-- **Prefill**: Processing input Prompt stage
-- **Decode**: Generating output token by token stage
+**7) Full names and explanations of nouns and abbreviations**
+- **ETL**: Extract, Transform, Load. A process to collect data, transform it to fit a target schema, and load it into a destination.
+- **ELT**: Extract, Load, Transform. Similar to ETL but load happens before transformation.
+- **QPS**: Queries Per Second. A measure of the number of queries or requests a system can handle per second.
+- **TPS**: Transactions Per Second. A measure of the number of transactions a system processes per second.
+- **P99 Latency**: The 99th percentile latency, meaning 99% of requests are faster than this value.
+- **DAG**: Directed Acyclic Graph. A graph with nodes and directed edges that has no cycles, used to represent workflow dependencies.
+
+---
+

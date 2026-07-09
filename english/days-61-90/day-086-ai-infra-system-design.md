@@ -1,38 +1,37 @@
-# Day 86: Day 86: AI Infra System Design Topic 86
+### **Day 86: Observability and Monitoring for AI Systems (Prometheus, Grafana, OpenTelemetry, LangSmith)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Metrics, logs, and traces for AI systems
+- LLM-specific observability
+- Alerting and dashboards
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Metrics collection interval: 10 seconds
+- Trace sampling rate: 10% for LLM requests
+- Alert latency: < 1 minute for P99 latency degradation
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Metrics: Prometheus for GPU, CPU, QPS, latency metrics
+- Traces: OpenTelemetry for distributed tracing of RAG pipelines
+- LLM Observability: LangSmith, LlamaIndex Observability, or Arize AI
+- Dashboards: Grafana for visualization
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Prometheus + Grafana vs Commercial APM**: Prometheus is open-source and flexible but requires setup and maintenance. Commercial APM (Datadog, Arize) offers out-of-the-box LLM metrics and RAG tracing but at higher cost.
+- **OpenTelemetry**: An open-standard for traces, metrics, and logs, enabling vendor-agnostic observability.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Open-source (Prometheus/Grafana/OTel): Cost-effective, flexible, but requires engineering effort to set up and maintain.
+- Commercial LLM observability: Faster time-to-value, RAG-specific metrics, but vendor lock-in and higher cost.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For teams with strong SRE/observability engineering, use Prometheus + Grafana + OpenTelemetry.
+- For RAG-specific observability and LLM app debugging, integrate LangSmith or Arize AI.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **APM**: Application Performance Monitoring. Tools and practices to monitor and manage the performance of software applications.
+- **OpenTelemetry**: An open-source observability framework for traces, metrics, and logs.
+- **LangSmith**: LangChain's platform for LLM application observability and evaluation.
+
+---
+

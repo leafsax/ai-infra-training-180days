@@ -1,38 +1,38 @@
-# Day 84: Day 84: AI Infra System Design Topic 84
+### **Day 84: Fault Tolerance and High Availability in AI Serving Systems**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- High availability (HA) design for model serving
+- Fault tolerance and retry mechanisms
+- Multi-region and multi-zone deployment
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Availability target: 99.99%
+- RTO (Recovery Time Objective): < 5 minutes
+- RPO (Recovery Point Objective): 0 for stateless serving; < 1 hour for model artifacts
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Multi-Zone Deployment: Spread pods across availability zones
+- Health Checks: Liveness and readiness probes for serving pods
+- Failover: Automatic routing to healthy replicas or zones
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Stateless vs Stateful Serving**: LLM serving is mostly stateless (except KV Cache in memory). Statelessness enables easy scaling and failover. KV Cache is ephemeral and lost on pod restart, but this is acceptable as it only affects in-flight requests.
+- **Liveness vs Readiness Probes**: Liveness probe determines if the pod should be restarted. Readiness probe determines if the pod should receive traffic.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- Multi-zone: Increases HA but adds cross-zone network latency and cost.
+- Stateless design: Simplifies scaling and failover, but in-flight KV Cache is lost on restart.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Deploy model serving pods across multiple availability zones for HA.
+- Use readiness and liveness probes to ensure only healthy pods receive traffic.
+- Accept KV Cache loss on restart as in-flight requests will be retried by clients or queue.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **HA**: High Availability. A system design that ensures a high level of operational performance.
+- **RTO**: Recovery Time Objective. The targeted duration of time within which a business process must be restored after a disaster.
+- **RPO**: Recovery Point Objective. The maximum targeted period in which data might be lost from an IT service due to a major incident.
+- **Liveness/Readiness Probes**: Kubernetes mechanisms to check if a container is running (liveness) or ready to serve traffic (readiness).
+
+---
+

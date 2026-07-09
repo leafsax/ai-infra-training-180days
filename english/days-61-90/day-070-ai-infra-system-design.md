@@ -1,38 +1,40 @@
-# Day 70: Day 70: AI Infra System Design Topic 70
+### **Day 70: RAG Evaluation Metrics and Frameworks (RAGAS, TruLens, LLM-as-a-Judge)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- RAG system evaluation metrics (context precision, answer relevance, faithfulness)
+- Evaluation frameworks and tools
+- LLM-as-a-Judge and human evaluation
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Evaluation dataset size: 500 question-context-answer triplets
+- Target metrics: Faithfulness > 0.85, Answer relevancy > 0.80, Context precision > 0.75
+- Evaluation throughput: 100 evaluations/minute via LLM-as-a-Judge
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Evaluation Framework: RAGAS (RAG Assessment), TruLens, or LangSmith
+- Metrics Computation: Context precision, context recall, faithfulness, answer relevancy
+- LLM-as-a-Judge: Use a strong LLM (e.g., GPT-4, Claude 3) to score generations based on rubrics
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **RAGAS vs TruLens vs LangSmith**: RAGAS is specialized for RAG metrics (faithfulness, context precision) and open-source. TruLens focuses on LLM app observability and feedback loops. LangSmith is LangChain's platform for tracing, testing, and evaluating pipelines.
+- **LLM-as-a-Judge vs Human Evaluation**: LLM-as-a-Judge is fast, scalable, and cost-effective but may have biases or inconsistencies. Human evaluation is accurate and nuanced but slow and expensive.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- RAGAS: Comprehensive RAG-specific metrics, but requires ground truth contexts or answers.
+- LLM-as-a-Judge: Scalable and automated, but depends on the judge model's capability and may hallucinate scores.
+- Automated vs Human evaluation: Automated is fast and cheap; human is gold-standard but not scalable for continuous evaluation.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For RAG-specific metric evaluation (faithfulness, context precision), use RAGAS.
+- For end-to-end LLM app observability and A/B testing, use LangSmith or TruLens.
+- For production evaluation, combine LLM-as-a-Judge for scale with periodic human evaluation for ground truth validation.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **RAGAS**: RAG Assessment. An open-source framework to evaluate RAG pipelines.
+- **Faithfulness**: A RAG metric measuring whether the generated answer is grounded in the retrieved context.
+- **Answer Relevancy**: A metric measuring how well the generated answer addresses the user's query.
+- **Context Precision**: A metric measuring the precision of the retrieved context in containing relevant information.
+- **LLM-as-a-Judge**: Using a Large Language Model to evaluate or score the outputs of another LLM or RAG system.
+
+---
+

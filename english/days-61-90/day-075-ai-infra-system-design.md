@@ -1,38 +1,39 @@
-# Day 75: Day 75: AI Infra System Design Topic 75
+### **Day 75: RAG Security, Privacy, PII Redaction, and Data Governance**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Data security and access control in RAG
+- PII (Personally Identifiable Information) redaction
+- Data governance and compliance (GDPR, HIPAA)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- PII detection accuracy: > 99% for sensitive data types (email, SSN, credit card)
+- Access control latency: < 10 ms per document access check
+- Compliance: Must support GDPR right-to-be-forgotten (data deletion)
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- PII Redaction Layer: Presidio (Microsoft), spaCy NER, or commercial PII detectors before indexing
+- Access Control: Row-level security, document-level permissions integrated into retrieval filter
+- Audit Logging: Log all RAG queries, retrievals, and generations for compliance
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **Presidio vs Custom NER**: Presidio is a comprehensive PII redaction framework with many detectors and redaction strategies. Custom NER models are tailored to specific domains but require training and maintenance.
+- **Access Control Integration**: Implement access control at the retrieval layer by filtering vector search results based on user permissions (metadata filters).
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- PII Redaction: Protects privacy but may remove useful context or introduce errors if over-redacting.
+- Metadata-based access control: Efficient and integrates with vector DB filters, but requires consistent metadata tagging during ingestion.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- Use Presidio or similar PII redaction tools before indexing sensitive documents.
+- Implement document-level access control via metadata filters in the vector DB.
+- Ensure audit logging is enabled for all RAG interactions to support compliance audits.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **PII**: Personally Identifiable Information. Data that can be used to identify a specific individual.
+- **GDPR**: General Data Protection Regulation. EU regulation on data protection and privacy.
+- **HIPAA**: Health Insurance Portability and Accountability Act. US regulation for healthcare data privacy.
+- **Presidio**: An open-source PII redaction and analysis framework by Microsoft.
+- **NER**: Named Entity Recognition. NLP task for identifying entities like persons, organizations, locations in text.
+
+---
+

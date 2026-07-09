@@ -1,38 +1,39 @@
-# Day 77: Day 77: AI Infra System Design Topic 77
+### **Day 77: Kubernetes Auto-Scaling (HPA, VPA, KEDA, CRDs)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Kubernetes scaling mechanisms: HPA, VPA, KEDA
+- Custom Resource Definitions (CRDs) for AI workloads
+- Metric-based auto-scaling
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Pod scaling range: 2 to 20 replicas
+- VPA recommendations: CPU 4 cores, Memory 16 GB, GPU 1 per pod
+- Scaling latency target: < 30 seconds from trigger to new pod ready
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- HPA: Scales based on CPU, memory, or custom metrics (via Custom Metrics API)
+- VPA: Vertical Pod Autoscaler, recommends or applies resource requests/limits
+- KEDA: Kubernetes Event-driven Autoscaling, scales based on external events (Kafka queue length, Prometheus metrics)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **HPA vs KEDA**: HPA is built into Kubernetes and scales based on resource metrics or custom metrics. KEDA is an operator that scales based on event sources (message queues, HTTP concurrency) and is more suitable for bursty AI workloads.
+- **VPA vs Manual Resource Tuning**: VPA automatically recommends or sets resource requests, but can cause pod evictions and restarts. Manual tuning requires expertise but offers stability.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- HPA: Standard, widely supported, but may not natively support GPU or custom AI metrics without setup.
+- KEDA: Excellent for event-driven scaling (e.g., queue length), but requires additional operator and configuration.
+- VPA: Optimizes resource usage but can cause instability due to pod rescheduling.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For standard resource-based scaling (CPU/memory), use HPA.
+- For event-driven or custom metric scaling (GPU utilization, queue length), use KEDA.
+- For resource optimization over time, use VPA in recommendation mode, not auto-apply, to avoid disruptions.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **VPA**: Vertical Pod Autoscaler. A Kubernetes tool that adjusts the CPU and memory resources of pods.
+- **KEDA**: Kubernetes Event-driven Autoscaling. An open-source project for event-driven scale.
+- **CRD**: Custom Resource Definition. A way to extend the Kubernetes API with custom resources.
+- **Custom Metrics API**: Kubernetes API for exposing custom metrics for HPA.
+
+---
+

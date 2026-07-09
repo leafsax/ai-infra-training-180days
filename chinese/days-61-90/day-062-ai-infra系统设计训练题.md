@@ -1,38 +1,40 @@
-# 第62天：第62天：AI Infra系统设计训练题
+### Day 62: 数据过滤与质量评估管道 (Data Filtering and Quality Evaluation Pipeline)
 
-## 1) 题目与考察核心
-**题目**：设计一个用于训练 100B 参数大语言模型的分布式训练系统。
-**考察核心**：分布式训练并行策略（DP/TP/PP）、显存优化技术（ZeRO）、通信优化。
+**1) 题目与考察核心**：
+设计一个数据过滤与质量评估管道，用于在LLM训练前对语料进行质量评分和过滤。考察启发式规则、机器学习模型评分、以及大规模数据标签与过滤架构。
 
-## 2) 需求澄清与指标定义
-- **gpu_count**: 1024 张 H100 80GB GPU
-- **training_time**: < 30 天
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B（1000亿）参数，FP16/BF16 精度
+**2) 需求澄清与指标定义**：
+- 数据量：每日处理 1 TB 清洗后的文本数据。
+- 处理延迟：T+1 离线批处理。
+- 吞吐量：处理速度需达到 200 MB/s。
+- 质量评分：需区分高质量（High-quality）、中等质量（Medium）、低质量（Low-quality）数据，高质量数据占比预估为 30%。
+- 过滤准确率：误过滤高质量数据（False Negative）率需 < 2%，低质量数据漏过滤（False Positive）率 < 5%。
 
-## 3) 核心架构/技术组件设计
-- 数据并行（DP）节点集群
-- 张量并行（TP）层
-- 流水线并行（PP）阶段
-- 优化器状态管理
+**3) 核心架构/技术组件设计**：
+- 启发式规则过滤层：基于长度、特殊字符比例、代码/数学公式比例、语言检测等进行初步过滤。
+- 机器学习质量评分模型层：使用预训练的分类器或排序模型（如 Quality Scorer Model）对文本段落进行质量评分。
+- 规则引擎与调度层：使用 Apache Airflow 或 Metaflow 调度批处理任务，基于 Spark 或 Ray 进行分布式评分。
+- 存储与输出层：评分结果与元数据存入数据湖（如 Delta Lake），按质量分桶存储。
 
-## 4) 关键技术深入与可能解
-- **DP（Data Parallel，数据并行）**
-- **TP（Tensor Parallel，张量并行）**
-- **PP（Pipeline Parallel，流水线并行）**
-- **ZeRO（Zero Redundancy Optimizer，零冗余优化器）**
+**4) 关键技术深入与可能解**：
+- 启发式过滤 vs 模型驱动过滤：
+  - 启发式规则（Heuristics）：基于领域经验编写规则（如文本长度>50，英文占比>80%），计算成本低，可解释性强，但难以覆盖所有边缘情况。
+  - 模型驱动（Model-based）：使用如 LLM-as-a-Judge 或专门的 Quality Scorer（如 Perplexity-based scoring），精度高，但计算成本高，需要 GPU 资源。
 
-## 5) Trade-off（权衡）分析
-- DP vs TP vs PP
-- ZeRO-3 的通信开销
+**5) Trade-off（权衡）分析**：
+- 启发式规则计算成本极低（CPU 即可），但覆盖率有限；模型驱动评分准确度高，但需要大量计算资源（如使用小模型如 RoBERTa-base 进行打分，或 LLM 打分）。
+- 逐段评分 vs 文档级评分：逐段评分更精细，但会增加模型调用次数和延迟；文档级评分速度快，但可能掩盖局部低质量内容。
 
-## 6) 如何确定最优解
-3D 并行（DP + TP + PP） + ZeRO-3 优化器状态分片
+**6) 如何确定最优解**：
+最优解是采用多级过滤架构：第一级使用高效的启发式规则过滤掉明显低质量数据；第二级使用轻量级机器学习模型（如基于困惑度 Perplexity 的评分或小型分类器）进行中等质量评估；第三级对高价值领域语料使用 LLM-as-a-Judge 进行精细评分。
 
-## 7) 名词和缩写解释
-- **DP**: Data Parallel，数据并行
-- **TP**: Tensor Parallel，张量并行
-- **PP**: Pipeline Parallel，流水线并行
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: NVIDIA 提供的高带宽 GPU 间互联技术
+**7) 名词和缩写全称及解释**：
+- **Heuristics**：启发式方法，基于经验规则解决问题的方法。
+- **LLM-as-a-Judge**：使用大型语言模型作为评判者，对文本质量、安全性等进行评分。
+- **Perplexity (PPL)**：困惑度，语言模型中用于衡量模型对某文本预测不确定性的指标，PPL 越低表示文本质量越高、越符合语言规律。
+- **False Negative (FN)**：假阴性，实际为高质量但被错误过滤的数据。
+- **False Positive (FP)**：假阳性，实际为低质量但未被过滤的数据。
+- **Delta Lake**：一种开源存储层，提供数据湖上的 ACID 事务支持。
+
+---
+

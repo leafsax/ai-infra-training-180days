@@ -1,38 +1,40 @@
-# Day 74: Day 74: AI Infra System Design Topic 74
+### **Day 74: Multi-modal RAG (Images, Videos, Documents, PDFs)**
 
-## 1) Topic and Core Examination Areas
-**Topic**: Design a distributed training system for training a 100B parameter Large Language Model.
-**Core Examination Areas**: Distributed training parallel strategies (DP/TP/PP), memory optimization technology (ZeRO), communication optimization.
+**1) Topic and Core Examination Areas**
+- Multi-modal document parsing (PDFs with images, tables, charts)
+- Multi-modal embedding and retrieval (CLIP, image embeddings)
+- Multi-modal LLM generation (GPT-4V, Claude 3, LLaVA)
 
-## 2) Requirement Clarification and Metric Definitions
-- **gpu_count**: 1024 H100 80GB GPUs
-- **training_time**: < 30 days
-- **tflops_utilization**: > 60%
-- **model_parameters**: 100B parameters, FP16/BF16 precision
+**2) Requirement Clarification and Metric Definitions**
+- Document types: PDFs with images, tables, OCR text
+- Image embedding dimension: 512 or 768 (CLIP embeddings)
+- Multi-modal retrieval QPS: 2,000 QPS
+- Multi-modal LLM inference latency: TTFT < 1 second, total < 5 seconds
 
-## 3) Core Architecture/Technical Component Design
-- Data Parallel (DP) node cluster
-- Tensor Parallel (TP) layer
-- Pipeline Parallel (PP) stage
-- Optimizer state management
+**3) Core Architecture/Technical Component Design**
+- Parsing Layer: PDF extraction with layout analysis (LayoutLM, DocParse), OCR for images (Tesseract, AWS Textract)
+- Multi-modal Embedding: CLIP (Contrastive Language-Image Pre-training) for image-text pairs, or dedicated image embeddings
+- Storage: Vector DB for text and image embeddings, with metadata linking images to text chunks
+- Generator: Multi-modal LLM (GPT-4V, Claude 3 Sonnet/Opus, LLaVA)
 
-## 4) Deep Dive into Key Technologies and Possible Solutions
-- **DP (Data Parallel)**
-- **TP (Tensor Parallel)**
-- **PP (Pipeline Parallel)**
-- **ZeRO (Zero Redundancy Optimizer)**
+**4) Deep Dive into Key Technologies and Possible Solutions**
+- **OCR vs Layout-aware parsing**: OCR extracts text from images but may lose structure. Layout-aware models (LayoutLM) preserve document structure (headers, tables, columns), improving chunking quality.
+- **CLIP vs Dedicated Image Embeddings**: CLIP provides joint image-text embeddings, enabling cross-modal search. Dedicated image embeddings (e.g., ResNet features) are optimized for visual similarity but not cross-modal semantic search.
 
-## 5) Trade-off Analysis
-- DP vs TP vs PP
-- ZeRO-3的通信开销
+**5) Trade-off analysis**
+- OCR vs Layout-aware: Layout-aware is more accurate for structured documents but requires more compute and specialized models.
+- Multi-modal LLMs: GPT-4V/Claude 3 offer high quality but are SaaS and expensive; open-source multi-modal models (LLaVA) are cheaper to run but may have lower accuracy or latency.
 
-## 6) How to Determine the Optimal Solution
-3D parallel (DP + TP + PP) + ZeRO-3 optimizer state sharding
+**6) How to determine the optimal solution**
+- For PDFs with complex layouts and tables, use layout-aware parsing + OCR.
+- For cross-modal search (image-text), use CLIP embeddings.
+- For high-quality multi-modal generation, use GPT-4V or Claude 3; for cost-effective self-hosted, consider LLaVA or Qwen-VL.
 
-## 7) Full Names and Explanations of All Nouns and Abbreviations
-- **DP**: Data Parallel, data parallel
-- **TP**: Tensor Parallel, tensor parallel
-- **PP**: Pipeline Parallel, pipeline parallel
-- **ZeRO**: Zero Redundancy Optimizer
-- **TFLOPs**: Tera Floating-point Operations Per Second
-- **NVLink**: High-bandwidth GPU interconnection technology
+**7) Full names and explanations of nouns and abbreviations**
+- **OCR**: Optical Character Recognition. Technology that converts images of text into machine-encoded text.
+- **CLIP**: Contrastive Language-Image Pre-training. A model that learns joint representations of images and text.
+- **LLaVA**: Large Language-and-Vision Assistant. An open-source multi-modal LLM.
+- **GPT-4V**: GPT-4 with Vision capabilities.
+
+---
+
